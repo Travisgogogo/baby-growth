@@ -1,0 +1,57 @@
+class Baby {
+   final int? id;
+   final String name;
+   final DateTime birthDate;
+   final String gender;
+   final double? birthWeight;
+   final double? birthHeight;
+   final double? birthHeadCircumference;
+
+   Baby({
+     this.id,
+     required this.name,
+     required this.birthDate,
+     required this.gender,
+     this.birthWeight,
+     this.birthHeight,
+     this.birthHeadCircumference,
+   });
+
+   Map<String, dynamic> toMap() {
+     return {
+       'id': id,
+       'name': name,
+       'birthDate': birthDate.toIso8601String(),
+       'gender': gender,
+       'birthWeight': birthWeight,
+       'birthHeight': birthHeight,
+       'birthHeadCircumference': birthHeadCircumference,
+     };
+   }
+
+   factory Baby.fromMap(Map<String, dynamic> map) {
+     return Baby(
+       id: map['id'],
+       name: map['name'],
+       birthDate: DateTime.parse(map['birthDate']),
+       gender: map['gender'],
+       birthWeight: map['birthWeight'],
+       birthHeight: map['birthHeight'],
+       birthHeadCircumference: map['birthHeadCircumference'],
+     );
+   }
+
+   int get ageInDays {
+     return DateTime.now().difference(birthDate).inDays;
+   }
+
+   String get ageDisplay {
+     final days = ageInDays;
+     if (days < 30) return '$days天';
+     final months = days ~/ 30;
+     if (months < 12) return '$months个月${days % 30}天';
+     final years = months ~/ 12;
+     final remainingMonths = months % 12;
+     return '$years岁$remainingMonths个月';
+   }
+ }
