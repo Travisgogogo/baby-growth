@@ -40,4 +40,24 @@ class GrowthRecord {
        note: map['note'],
      );
    }
+
+   GrowthRecord copyWith({
+     int? id,
+     int? babyId,
+     DateTime? date,
+     double? weight,
+     double? height,
+     double? headCircumference,
+     String? note,
+   }) {
+     return GrowthRecord(
+       id: id ?? this.id,
+       babyId: babyId ?? this.babyId,
+       date: date ?? this.date,
+       weight: weight ?? this.weight,
+       height: height ?? this.height,
+       headCircumference: headCircumference ?? this.headCircumference,
+       note: note ?? this.note,
+     );
+   }
  }

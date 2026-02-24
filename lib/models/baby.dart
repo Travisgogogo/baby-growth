@@ -54,4 +54,24 @@ class Baby {
      final remainingMonths = months % 12;
      return '$years岁$remainingMonths个月';
    }
+
+   Baby copyWith({
+     int? id,
+     String? name,
+     DateTime? birthDate,
+     String? gender,
+     double? birthWeight,
+     double? birthHeight,
+     double? birthHeadCircumference,
+   }) {
+     return Baby(
+       id: id ?? this.id,
+       name: name ?? this.name,
+       birthDate: birthDate ?? this.birthDate,
+       gender: gender ?? this.gender,
+       birthWeight: birthWeight ?? this.birthWeight,
+       birthHeight: birthHeight ?? this.birthHeight,
+       birthHeadCircumference: birthHeadCircumference ?? this.birthHeadCircumference,
+     );
+   }
  }
