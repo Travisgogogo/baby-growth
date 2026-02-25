@@ -27,24 +27,38 @@ jobs:
     
     - name: Create Android Project
       run: |
-        # Save current project files
-        mkdir -p /tmp/project_backup
-        cp -r lib pubspec.yaml /tmp/project_backup/
+        # Create Android project structure using flutter create in a temp directory
+        mkdir -p /tmp/flutter_project
+        cd /tmp/flutter_project
+        flutter create --project-name=baby_growth --platforms=android baby_growth
         
-        # Remove everything except .git and .github
-        find . -maxdepth 1 -not -name '.' -not -name '.git' -not -name '.github' -exec rm -rf {} \;
+        # Copy generated Android directory back to the project
+        cd $GITHUB_WORKSPACE
+        cp -r /tmp/flutter_project/baby_growth/android .
         
-        # Create new Flutter project with same name
-        flutter create --project-name=baby_growth --platforms=android .
+        # Also copy other necessary platform directories if they don't exist
+        if [ ! -d "ios" ]; then cp -r /tmp/flutter_project/baby_growth/ios . 2>/dev/null || true; fi
+        if [ ! -d "linux" ]; then cp -r /tmp/flutter_project/baby_growth/linux . 2>/dev/null || true; fi
+        if [ ! -d "macos" ]; then cp -r /tmp/flutter_project/baby_growth/macos . 2>/dev/null || true; fi
+        if [ ! -d "windows" ]; then cp -r /tmp/flutter_project/baby_growth/windows . 2>/dev/null || true; fi
+        if [ ! -d "web" ]; then cp -r /tmp/flutter_project/baby_growth/web . 2>/dev/null || true; fi
         
-        # Restore project files
-        cp -r /tmp/project_backup/lib/* lib/
-        cp /tmp/project_backup/pubspec.yaml .
+        # Ensure analysis_options.yaml exists
+        if [ ! -f "analysis_options.yaml" ]; then
+          cp /tmp/flutter_project/baby_growth/analysis_options.yaml . 2>/dev/null || true
+        fi
+        
+        # List the project structure for debugging
+        echo "=== Project structure ==="
+        ls -la
+        echo "=== Android directory ==="
+        ls -la android/ || echo "No android directory"
     
     - name: Build APK
       run: |
+        flutter clean
         flutter pub get
-        flutter build apk --release
+        flutter build apk --release --verbose
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
