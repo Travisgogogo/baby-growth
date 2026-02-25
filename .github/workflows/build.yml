@@ -35,8 +35,8 @@ jobs:
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
         cd myapp
         
-        # Fix Kotlin version
-        sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
+        # Fix Kotlin version in settings.gradle (Flutter 3.24 uses plugins block)
+        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
         
         flutter pub get
         flutter build apk --release --verbose 2>&1 | tee build.log
