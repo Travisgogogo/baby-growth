@@ -126,7 +126,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              // TODO: Implement actual restore
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('恢复功能开发中')),
               );
@@ -134,6 +133,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('恢复'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _editBabyProfile() {
+    if (_baby == null) return;
+    
+    final nameController = TextEditingController(text: _baby!.name);
+    final weightController = TextEditingController(text: _baby!.birthWeight?.toString() ?? '');
+    final heightController = TextEditingController(text: _baby!.birthHeight?.toString() ?? '');
+    final headController = TextEditingController(text: _baby!.birthHeadCircumference?.toString() ?? '');
+    String gender = _baby!.gender;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑宝宝资料'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: '宝宝姓名',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: '男', label: Text('男')),
+                    ButtonSegment(value: '女', label: Text('女')),
+                  ],
+                  selected: {gender},
+                  onSelectionChanged: (set) {
+                    setDialogState(() => gender = set.first);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生体重 (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: heightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生身高 (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: headController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生头围 (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final updatedBaby = _baby!.copyWith(
+                  name: nameController.text,
+                  gender: gender,
+                  birthWeight: double.tryParse(weightController.text),
+                  birthHeight: double.tryParse(heightController.text),
+                  birthHeadCircumference: double.tryParse(headController.text),
+                );
+                setState(() => _baby = updatedBaby);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('资料已更新')),
+                );
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -195,25 +288,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            child: Text(_baby!.name[0], style: const TextStyle(fontSize: 32, color: Colors.white)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_baby!.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 4),
-                Text('${_baby!.gender} · ${_baby!.ageDisplay}', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
-              ],
+      child: InkWell(
+        onTap: _editBabyProfile,
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: Text(_baby!.name[0], style: const TextStyle(fontSize: 32, color: Colors.white)),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(_baby!.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.edit, color: Colors.white70, size: 18),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${_baby!.gender} · ${_baby!.ageDisplay}', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
