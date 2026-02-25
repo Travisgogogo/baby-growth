@@ -26,9 +26,9 @@ jobs:
     
     - name: Build APK
       run: |
-        # Create new Flutter project
+        # Create new Flutter project with Android support
         cd /tmp
-        flutter create temp_project
+        flutter create --platforms=android temp_project
         
         # Replace lib directory
         rm -rf temp_project/lib
