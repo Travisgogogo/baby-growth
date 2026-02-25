@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     steps:
     - uses: actions/checkout@v4
@@ -30,17 +30,23 @@ jobs:
         cd /tmp
         rm -rf myapp
         flutter create --platforms=android myapp
+        
+        # Copy all project files
         rm -rf myapp/lib
         cp -r $GITHUB_WORKSPACE/lib myapp/
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
+        
         cd myapp
         
-        # Fix Kotlin version in settings.gradle (Flutter 3.24 uses plugins block)
+        # Fix Kotlin version for Flutter 3.24
         sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
         
+        # Fix minSdkVersion for sqflite
+        sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
+        
         flutter pub get
-        flutter build apk --release --verbose 2>&1 | tee build.log
-        ls -la build/app/outputs/flutter-apk/
+        flutter build apk --release
+        
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
     - name: Upload APK
