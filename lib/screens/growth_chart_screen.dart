@@ -106,15 +106,15 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildMetricButton('weight', '体重', '${_baby?.birthWeight.toStringAsFixed(1) ?? "--"} kg'),
+                  child: _buildMetricButton('weight', '体重', '${_baby?.birthWeight?.toStringAsFixed(1) ?? "--"} kg'),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildMetricButton('height', '身高', '${_baby?.birthHeight.toStringAsFixed(0) ?? "--"} cm'),
+                  child: _buildMetricButton('height', '身高', '${_baby?.birthHeight?.toStringAsFixed(0) ?? "--"} cm'),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildMetricButton('head', '头围', '${_baby?.birthHeadCircumference.toStringAsFixed(0) ?? "--"} cm'),
+                  child: _buildMetricButton('head', '头围', '${_baby?.birthHeadCircumference?.toStringAsFixed(0) ?? "--"} cm'),
                 ),
               ],
             ),
