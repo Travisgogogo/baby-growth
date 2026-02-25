@@ -29,8 +29,8 @@ jobs:
       run: |
         # Remove incomplete android directory if exists
         rm -rf android
-        # Create Android platform files
-        flutter create --platforms=android .
+        # Create Android platform files with overwrite flag
+        flutter create --platforms=android --overwrite .
     
     - name: Build APK
       run: |
