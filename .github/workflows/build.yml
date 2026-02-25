@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     
     steps:
     - uses: actions/checkout@v4
@@ -25,44 +24,22 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
-    - name: Create Android Project
-      run: |
-        # Create Android project structure using flutter create in a temp directory
-        mkdir -p /tmp/flutter_project
-        cd /tmp/flutter_project
-        flutter create --project-name=baby_growth --platforms=android baby_growth
-        
-        # Copy generated Android directory back to the project
-        cd $GITHUB_WORKSPACE
-        cp -r /tmp/flutter_project/baby_growth/android .
-        
-        # Also copy other necessary platform directories if they don't exist
-        if [ ! -d "ios" ]; then cp -r /tmp/flutter_project/baby_growth/ios . 2>/dev/null || true; fi
-        if [ ! -d "linux" ]; then cp -r /tmp/flutter_project/baby_growth/linux . 2>/dev/null || true; fi
-        if [ ! -d "macos" ]; then cp -r /tmp/flutter_project/baby_growth/macos . 2>/dev/null || true; fi
-        if [ ! -d "windows" ]; then cp -r /tmp/flutter_project/baby_growth/windows . 2>/dev/null || true; fi
-        if [ ! -d "web" ]; then cp -r /tmp/flutter_project/baby_growth/web . 2>/dev/null || true; fi
-        
-        # Ensure analysis_options.yaml exists
-        if [ ! -f "analysis_options.yaml" ]; then
-          cp /tmp/flutter_project/baby_growth/analysis_options.yaml . 2>/dev/null || true
-        fi
-        
-        # List the project structure for debugging
-        echo "=== Project structure ==="
-        ls -la
-        echo "=== Android directory ==="
-        ls -la android/ || echo "No android directory"
-    
     - name: Build APK
       run: |
-        flutter clean
+        cd /tmp
+        rm -rf myapp
+        flutter create --platforms=android myapp
+        rm -rf myapp/lib
+        cp -r $GITHUB_WORKSPACE/lib myapp/
+        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
+        cd myapp
         flutter pub get
-        flutter build apk --release --verbose
+        flutter build apk --release --verbose 2>&1 | tee build.log || true
+        cp /tmp/myapp/build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/app-release.apk
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: app-release.apk
         retention-days: 30
