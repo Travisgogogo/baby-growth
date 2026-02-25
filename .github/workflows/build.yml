@@ -15,23 +15,11 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'
+        flutter-version: '3.24.0'
         channel: 'stable'
     
-    - name: Create Android project
-      run: |
-        # Create a new temp project with Android platform in /tmp
-        cd /tmp
-        flutter create --platforms=android --project-name=baby_growth temp_project
-        
-        # Copy the generated android folder to our project
-        cp -r /tmp/temp_project/android ${{ github.workspace }}/
-        
-        # Copy metadata file
-        cp -r /tmp/temp_project/.metadata ${{ github.workspace }}/
-        
-        # Clean up
-        rm -rf /tmp/temp_project
+    - name: Generate Android project
+      run: flutter create --platforms=android .
     
     - name: Get dependencies
       run: flutter pub get
