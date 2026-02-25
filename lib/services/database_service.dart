@@ -219,6 +219,16 @@ class DatabaseService {
     return maps.map((map) => Baby.fromMap(map)).toList();
   }
 
+  Future<void> updateBaby(Baby baby) async {
+    final db = await database;
+    await db.update(
+      'babies',
+      baby.toMap(),
+      where: 'id = ?',
+      whereArgs: [baby.id],
+    );
+  }
+
   // Growth record operations
   Future<GrowthRecord> createGrowthRecord(GrowthRecord record) async {
     final db = await database;
