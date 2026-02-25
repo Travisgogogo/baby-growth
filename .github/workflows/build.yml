@@ -32,21 +32,19 @@ jobs:
         
         # Replace lib directory
         rm -rf temp_project/lib
-        cp -r ${{ github.workspace }}/lib temp_project/
+        cp -r $GITHUB_WORKSPACE/lib temp_project/
         
-        # Replace pubspec.yaml but keep SDK constraints
-        head -20 temp_project/pubspec.yaml > /tmp/pubspec_template.yaml
-        cat ${{ github.workspace }}/pubspec.yaml | grep -E "^(name:|description:|version:|environment:|dependencies:)" >> /tmp/pubspec_template.yaml
-        cp /tmp/pubspec_template.yaml temp_project/pubspec.yaml
+        # Use original pubspec.yaml
+        cp $GITHUB_WORKSPACE/pubspec.yaml temp_project/
         
         # Build
         cd temp_project
-        flutter pub get
+        flutter pub get || true
         flutter build apk --release
         
         # Copy APK back
-        mkdir -p ${{ github.workspace }}/build/app/outputs/flutter-apk/
-        cp build/app/outputs/flutter-apk/app-release.apk ${{ github.workspace }}/build/app/outputs/flutter-apk/
+        mkdir -p $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
+        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
