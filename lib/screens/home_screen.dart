@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   GrowthRecord? _latestGrowth;
   List<FeedRecord> _recentFeeds = [];
   int _currentIndex = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -31,12 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
+    setState(() => _isLoading = true);
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
       setState(() {
         _baby = babies.first;
       });
-      _loadBabyData(babies.first.id!);
+      await _loadBabyData(babies.first.id!);
     } else {
       final newBaby = await DatabaseService.instance.createBaby(
         Baby(
@@ -51,8 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _baby = newBaby;
       });
-      _loadBabyData(newBaby.id!);
+      await _loadBabyData(newBaby.id!);
     }
+    setState(() => _isLoading = false);
   }
 
   Future<void> _loadBabyData(int babyId) async {
@@ -105,6 +108,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
