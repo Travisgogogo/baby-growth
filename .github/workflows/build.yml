@@ -26,29 +26,17 @@ jobs:
     
     - name: Build APK
       run: |
-        # Create Flutter project with Android
-        cd /tmp
-        flutter create --platforms=android myapp
-        
-        # Copy lib
-        rm -rf myapp/lib
-        cp -r $GITHUB_WORKSPACE/lib myapp/
-        
-        # Copy pubspec.yaml
-        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
+        # Create Flutter project with Android in workspace
+        flutter create --platforms=android .
         
         # Fix minSdkVersion for sqflite
-        cd myapp/android/app
+        cd android/app
         sed -i 's/minSdkVersion .*/minSdkVersion 21/' build.gradle
-        cd /tmp/myapp
+        cd ../..
         
         # Build
         flutter pub get
         flutter build apk --release
-        
-        # Copy APK
-        mkdir -p $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
-        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
