@@ -24,15 +24,8 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
-    - name: Verify Flutter
-      run: flutter doctor -v
-    
     - name: Generate Android project
       run: |
-        # Backup current project
-        mkdir -p /tmp/project_backup
-        cp -r . /tmp/project_backup/
-        
         # Create fresh Flutter project with all files
         cd /tmp
         rm -rf baby_growth_android
@@ -40,31 +33,13 @@ jobs:
         
         # Copy the generated android directory back
         cp -r /tmp/baby_growth_android/android ${{ github.workspace }}/
-        
-        # Also ensure key files exist
-        if [ ! -f "${{ github.workspace }}/android/local.properties" ]; then
-          echo "flutter.sdk=/opt/hostedtoolcache/flutter/stable-3.24.0-x64" > ${{ github.workspace }}/android/local.properties
-        fi
-    
-    - name: Fix Android Gradle configuration
-      run: |
-        # Ensure gradle wrapper is executable
-        chmod +x ${{ github.workspace }}/android/gradlew || true
-        
-        # Check and fix build.gradle if needed
-        cat ${{ github.workspace }}/android/build.gradle
     
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Build APK with verbose output
-      timeout-minutes: 30
-      run: |
-        flutter build apk --release --verbose 2>&1 || {
-          echo "Build failed, checking error details..."
-          flutter build apk --release 2>&1 | tail -100
-          exit 1
-        }
+    - name: Build APK
+      timeout-minutes: 20
+      run: flutter build apk --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -73,11 +48,3 @@ jobs:
         name: baby-growth-apk
         path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
-    
-    - name: Upload build logs on failure
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: build-logs
-        path: build/
-        retention-days: 7
