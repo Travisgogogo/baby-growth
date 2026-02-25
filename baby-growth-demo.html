@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>宝宝成长记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            padding-bottom: 80px;
+        }
+        
+        /* 头部 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 16px;
+            color: white;
+        }
+        
+        .baby-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .avatar {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-right: 12px;
+        }
+        
+        .baby-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .baby-age {
+            font-size: 11px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .stat-item {
+            flex: 1;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: 9px;
+            opacity: 0.9;
+        }
+        
+        /* 快捷操作 */
+        .quick-actions {
+            margin: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .action-grid {
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .action-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        .action-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .action-label {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        /* 卡片 */
+        .card {
+            margin: 10px;
+            padding: 14px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .card-more {
+            font-size: 11px;
+            color: #667eea;
+        }
+        
+        /* 生长曲线占位 */
+        .chart-placeholder {
+            height: 140px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        /* 记录列表 */
+        .record-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f5f5f7;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .record-icon {
+            width: 36px;
+            height: 36px;
+            background: #fff5e6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 10px;
+        }
+        
+        .record-info {
+            flex: 1;
+        }
+        
+        .record-title {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .record-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 2px;
+        }
+        
+        /* 里程碑 */
+        .milestones-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        
+        .milestone-item {
+            flex-shrink: 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .milestone-item.completed {
+            background: #e8f5e9;
+        }
+        
+        .milestone-item.pending {
+            background: #f5f5f7;
+        }
+        
+        .milestone-icon {
+            font-size: 22px;
+        }
+        
+        .milestone-name {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .nav-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 4px 12px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+        }
+        
+        .nav-item:not(.active) {
+            color: #999;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+        }
+        
+        .nav-label {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+        
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            width: 85%;
+            max-width: 320px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .type-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .type-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .type-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f7;
+            color: #333;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* 页面切换 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            padding: 20px 16px;
+            background: white;
+        }
+        
+        .page-content {
+            padding: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 首页 -->
+    <div id="home-page" class="page active">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="baby-info">
+                <div class="avatar">👶</div>
+                <div>
+                    <div class="baby-name">小汤圆</div>
+                    <div class="baby-age">8个月15天 · 女宝</div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">8.5</div>
+                    <div class="stat-label">体重 kg</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">70</div>
+                    <div class="stat-label">身高 cm</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">44</div>
+                    <div class="stat-label">头围 cm</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快捷操作 -->
+        <div class="quick-actions">
+            <div class="action-grid">
+                <div class="action-item" onclick="showModal('feed')">
+                    <div class="action-icon" style="background: #fff5e6;">🍼</div>
+                    <div class="action-label">喂奶</div>
+                </div>
+                <div class="action-item" onclick="showModal('sleep')">
+                    <div class="action-icon" style="background: #e8f5e9;">😴</div>
+                    <div class="action-label">睡眠</div>
+                </div>
+                <div class="action-item" onclick="showModal('diaper')">
+                    <div class="action-icon" style="background: #fffde7;">💩</div>
+                    <div class="action-label">换尿布</div>
+                </div>
+                <div class="action-item" onclick="showModal('growth')">
+                    <div class="action-icon" style="background: #e3f2fd;">📏</div>
+                    <div class="action-label">量身高</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 生长曲线 -->
+        <div class="card" onclick="switchPage('growth')">
+            <div class="card-header">
+                <div class="card-title">📈 生长曲线</div>
+                <div class="card-more">查看详情 →</div>
+            </div>
+            <div class="chart-placeholder">
+                生长曲线图表区域
+            </div>
+        </div>
+        
+        <!-- 今日记录 -->
+        <div class="card" onclick="switchPage('records')">
+            <div class="card-header">
+                <div class="card-title">📝 今日记录</div>
+                <div class="card-more">全部记录 →</div>
+            </div>
+            <div id="records-list">
+                <div class="record-item">
+                    <div class="record-icon">🍼</div>
+                    <div class="record-info">
+                        <div class="record-title">母乳 · 120ml</div>
+                        <div class="record-time">30分钟前</div>
+                    </div>
+                </div>
+                <div class="record-item">
+                    <div class="record-icon">💩</div>
+                    <div class="record-info">
+                        <div class="record-title">换尿布 · 大便</div>
+                        <div class="record-time">2小时前</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 里程碑 -->
+        <div class="card" onclick="switchPage('milestones')">
+            <div class="card-header">
+                <div class="card-title">🎯 8月龄里程碑</div>
+                <div class="card-more">3/8 已完成 →</div>
+            </div>
+            <div class="milestones-scroll">
+                <div class="milestone-item completed">
+                    <div class="milestone-icon">✅</div>
+                    <div class="milestone-name">独坐稳定</div>
+                </div>
+                <div class="milestone-item completed">
+                    <div class="milestone-icon">✅</div>
+                    <div class="milestone-name">双手传递</div>
+                </div>
+                <div class="milestone-item completed">
+                    <div class="milestone-icon">✅</div>
+                    <div class="milestone-name">咿呀学语</div>
+                </div>
+                <div class="milestone-item pending">
+                    <div class="milestone-icon">⭕</div>
+                    <div class="milestone-name">爬行</div>
+                </div>
+                <div class="milestone-item pending">
+                    <div class="milestone-icon">⭕</div>
+                    <div class="milestone-name">理解"不"</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 生长页面 -->
+    <div id="growth-page" class="page">
+        <div class="page-title">📈 生长曲线</div>
+        <div class="page-content">
+            <div class="card">
+                <div class="chart-placeholder" style="height: 250px;">
+                    体重生长曲线
+                </div>
+            </div>
+            <div class="card">
+                <div class="chart-placeholder" style="height: 250px;">
+                    身高生长曲线
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 记录页面 -->
+    <div id="records-page" class="page">
+        <div class="page-title">📝 全部记录</div>
+        <div class="page-content">
+            <div class="card">
+                <div id="all-records">
+                    <!-- 记录列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 里程碑页面 -->
+    <div id="milestones-page" class="page">
+        <div class="page-title">🎯 发育里程碑</div>
+        <div class="page-content">
+            <div class="card">
+                <div class="card-title">8月龄里程碑</div>
+                <div style="margin-top: 12px;">
+                    <div class="record-item">
+                        <div class="record-icon">✅</div>
+                        <div class="record-info">
+                            <div class="record-title">独坐稳定</div>
+                            <div class="record-time">已完成</div>
+                        </div>
+                    </div>
+                    <div class="record-item">
+                        <div class="record-icon">✅</div>
+                        <div class="record-info">
+                            <div class="record-title">双手传递物品</div>
+                            <div class="record-time">已完成</div>
+                        </div>
+                    </div>
+                    <div class="record-item">
+                        <div class="record-icon">✅</div>
+                        <div class="record-info">
+                            <div class="record-title">咿呀学语</div>
+                            <div class="record-time">已完成</div>
+                        </div>
+                    </div>
+                    <div class="record-item">
+                        <div class="record-icon" style="background: #f5f5f7;">⭕</div>
+                        <div class="record-info">
+                            <div class="record-title">爬行</div>
+                            <div class="record-time">未完成</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 我的页面 -->
+    <div id="profile-page" class="page">
+        <div class="page-title">👤 我的</div>
+        <div class="page-content">
+            <div class="card">
+                <div class="baby-info" style="margin-bottom: 0;">
+                    <div class="avatar">👶</div>
+                    <div>
+                        <div style="font-size: 16px; font-weight: 600;">小汤圆</div>
+                        <div style="font-size: 12px; color: #666;">女宝 · 2025年6月10日出生</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">👶 宝宝资料</div>
+                <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">📊 生长标准</div>
+                <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">🔔 提醒设置</div>
+                <div style="padding: 12px 0;">⚙️ 系统设置</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('home')">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">首页</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('growth')">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">生长</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('records')">
+            <div class="nav-icon">➕</div>
+            <div class="nav-label">记录</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('milestones')">
+            <div class="nav-icon">🎯</div>
+            <div class="nav-label">里程碑</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('profile')">
+            <div class="nav-icon">👤</div>
+            <div class="nav-label">我的</div>
+        </div>
+    </div>
+    
+    <!-- 喂奶弹窗 -->
+    <div id="modal-feed" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">🍼 记录喂奶</div>
+            <div class="type-selector">
+                <button class="type-btn active" onclick="selectType(this)">母乳</button>
+                <button class="type-btn" onclick="selectType(this)">奶粉</button>
+                <button class="type-btn" onclick="selectType(this)">辅食</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">量（ml或g）</label>
+                <input type="number" class="form-input" id="feed-amount" placeholder="请输入">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('feed')">取消</button>
+                <button class="btn btn-primary" onclick="saveFeed()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 睡眠弹窗 -->
+    <div id="modal-sleep" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">😴 记录睡眠</div>
+            <p style="color: #666; margin-bottom: 16px;">宝宝开始睡觉了</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('sleep')">取消</button>
+                <button class="btn btn-primary" onclick="saveSleep()">开始睡眠</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 换尿布弹窗 -->
+    <div id="modal-diaper" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">💩 记录换尿布</div>
+            <div class="type-selector">
+                <button class="type-btn active" onclick="selectType(this)">湿尿</button>
+                <button class="type-btn" onclick="selectType(this)">大便</button>
+                <button class="type-btn" onclick="selectType(this)">两者</button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('diaper')">取消</button>
+                <button class="btn btn-primary" onclick="saveDiaper()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 生长数据弹窗 -->
+    <div id="modal-growth" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">📏 记录生长数据</div>
+            <div class="form-group">
+                <label class="form-label">体重 (kg)</label>
+                <input type="number" class="form-input" id="growth-weight" placeholder="8.5">
+            </div>
+            <div class="form-group">
+                <label class="form-label">身高 (cm)</label>
+                <input type="number" class="form-input" id="growth-height" placeholder="70">
+            </div>
+            <div class="form-group">
+                <label class="form-label">头围 (cm)</label>
+                <input type="number" class="form-input" id="growth-head" placeholder="44">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('growth')">取消</button>
+                <button class="btn btn-primary" onclick="saveGrowth()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面切换
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(page + '-page').classList.add('active');
+            
+            // 更新底部导航
+            const navItems = document.querySelectorAll('.nav-item');
+            const pageIndex = ['home', 'growth', 'records', 'milestones', 'profile'].indexOf(page);
+            if (pageIndex >= 0) {
+                navItems[pageIndex].classList.add('active');
+            }
+        }
+        
+        // 显示弹窗
+        function showModal(type) {
+            document.getElementById('modal-' + type).classList.add('active');
+        }
+        
+        // 关闭弹窗
+        function closeModal(type) {
+            document.getElementById('modal-' + type).classList.remove('active');
+        }
+        
+        // 选择类型
+        function selectType(btn) {
+            btn.parentElement.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        
+        // 保存喂奶记录
+        function saveFeed() {
+            const amount = document.getElementById('feed-amount').value;
+            if (amount) {
+                addRecord('🍼', '喂奶', amount + 'ml');
+                closeModal('feed');
+                document.getElementById('feed-amount').value = '';
+            }
+        }
+        
+        // 保存睡眠
+        function saveSleep() {
+            addRecord('😴', '睡眠', '开始睡觉');
+            closeModal('sleep');
+        }
+        
+        // 保存换尿布
+        function saveDiaper() {
+            const type = document.querySelector('#modal-diaper .type-btn.active').textContent;
+            addRecord('💩', '换尿布', type);
+            closeModal('diaper');
+        }
+        
+        // 保存生长数据
+        function saveGrowth() {
+            const weight = document.getElementById('growth-weight').value;
+            const height = document.getElementById('growth-height').value;
+            const head = document.getElementById('growth-head').value;
+            
+            if (weight || height || head) {
+                let details = [];
+                if (weight) details.push(weight + 'kg');
+                if (height) details.push(height + 'cm');
+                if (head) details.push('头围' + head);
+                
+                addRecord('📏', '生长记录', details.join(' · '));
+                closeModal('growth');
+                
+                // 清空输入
+                document.getElementById('growth-weight').value = '';
+                document.getElementById('growth-height').value = '';
+                document.getElementById('growth-head').value = '';
+            }
+        }
+        
+        // 添加记录
+        function addRecord(icon, title, detail) {
+            const recordsList = document.getElementById('records-list');
+            const newRecord = document.createElement('div');
+            newRecord.className = 'record-item';
+            newRecord.innerHTML = `
+                <div class="record-icon">${icon}</div>
+                <div class="record-info">
+                    <div class="record-title">${title} · ${detail}</div>
+                    <div class="record-time">刚刚</div>
+                </div>
+            `;
+            recordsList.insertBefore(newRecord, recordsList.firstChild);
+            
+            // 限制显示数量
+            while (recordsList.children.length > 5) {
+                recordsList.removeChild(recordsList.lastChild);
+            }
+        }
+        
+        // 点击弹窗外部关闭
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
