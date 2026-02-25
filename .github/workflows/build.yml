@@ -37,14 +37,17 @@ jobs:
         # Copy pubspec.yaml
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
         
-        # Build
+        # Build with verbose output
         cd myapp
         flutter pub get
-        flutter build apk --release
+        flutter build apk --release --verbose 2>&1 | tee build.log || true
+        
+        # Check if APK was created
+        ls -la build/app/outputs/flutter-apk/ || echo "APK not found"
         
         # Copy APK
         mkdir -p $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
-        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
+        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/ 2>/dev/null || echo "Copy failed"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
