@@ -308,6 +308,48 @@ class DatabaseService {
     return maps.map((map) => Photo.fromMap(map)).toList();
   }
 
+  // Delete operations
+  Future<void> deleteFeedRecord(int id) async {
+    final db = await database;
+    await db.delete('feed_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteGrowthRecord(int id) async {
+    final db = await database;
+    await db.delete('growth_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteSleepRecord(int id) async {
+    final db = await database;
+    await db.delete('sleep_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteDiaperRecord(int id) async {
+    final db = await database;
+    await db.delete('diaper_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Update operations
+  Future<void> updateFeedRecord(FeedRecord record) async {
+    final db = await database;
+    await db.update(
+      'feed_records',
+      record.toMap(),
+      where: 'id = ?',
+      whereArgs: [record.id],
+    );
+  }
+
+  Future<void> updateGrowthRecord(GrowthRecord record) async {
+    final db = await database;
+    await db.update(
+      'growth_records',
+      record.toMap(),
+      where: 'id = ?',
+      whereArgs: [record.id],
+    );
+  }
+
   Future close() async {
     final db = await database;
     db.close();
