@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>羽毛球训练打卡 - 中羽5级之路</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 16px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        
+        .progress-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .progress-item {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .progress-value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .progress-label {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        
+        .progress-line {
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4ade80;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        
+        /* 今日训练 */
+        .today-card {
+            margin: 16px;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .today-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .today-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .today-type {
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        
+        .training-list {
+            margin-bottom: 16px;
+        }
+        
+        .training-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .training-check {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .training-check.completed {
+            background: #4ade80;
+            border-color: #4ade80;
+            color: white;
+        }
+        
+        .training-info {
+            flex: 1;
+        }
+        
+        .training-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .training-detail {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 0 16px 16px;
+        }
+        
+        .stat-card {
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* 日历 */
+        .calendar-card {
+            margin: 0 16px 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .calendar-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 12px;
+        }
+        
+        .calendar-day.completed {
+            background: #4ade80;
+            color: white;
+        }
+        
+        .calendar-day.today {
+            border: 2px solid #667eea;
+        }
+        
+        /* 心得记录 */
+        .notes-card {
+            margin: 0 16px 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .notes-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .note-item {
+            padding: 12px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .note-date {
+            font-size: 11px;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        
+        .note-content {
+            font-size: 13px;
+            color: #333;
+        }
+        
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 4px 16px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+        }
+        
+        .nav-item:not(.active) {
+            color: #999;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+        }
+        
+        .nav-label {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+        
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            display: block;
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f7;
+            color: #333;
+        }
+        
+        /* 页面 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* 能力雷达图 */
+        .radar-card {
+            margin: 0 16px 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .radar-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .ability-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .ability-name {
+            width: 60px;
+            font-size: 13px;
+        }
+        
+        .ability-bar {
+            flex: 1;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin: 0 10px;
+            overflow: hidden;
+        }
+        
+        .ability-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        .ability-fill.low { background: #ef4444; }
+        .ability-fill.medium { background: #f59e0b; }
+        .ability-fill.high { background: #4ade80; }
+        
+        .ability-score {
+            width: 30px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- 打卡页面 -->
+    <div id="checkin-page" class="page active">
+        <div class="header">
+            <h1>🏸 中羽5级之路</h1>
+            <div style="font-size: 12px; opacity: 0.9;">当前等级: 4级 → 目标: 5.5级</div>
+            
+            <div class="progress-bar">
+                <div class="progress-item">
+                    <div class="progress-value">3/5</div>
+                    <div class="progress-label">步伐</div>
+                    <div class="progress-line"><div class="progress-fill" style="width: 60%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-value">3/5</div>
+                    <div class="progress-label">防守</div>
+                    <div class="progress-line"><div class="progress-fill" style="width: 60%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-value">1/5</div>
+                    <div class="progress-label">进攻</div>
+                    <div class="progress-line"><div class="progress-fill" style="width: 20%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-value">2/5</div>
+                    <div class="progress-label">心理</div>
+                    <div class="progress-line"><div class="progress-fill" style="width: 40%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-value">2/5</div>
+                    <div class="progress-label">技术</div>
+                    <div class="progress-line"><div class="progress-fill" style="width: 40%"></div></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 今日训练 -->
+        <div class="today-card">
+            <div class="today-header">
+                <div class="today-title">📅 今日训练计划</div>
+                <div class="today-type" id="today-type">基础训练</div>
+            </div>
+            
+            <div class="training-list" id="training-list">
+                <!-- 动态生成 -->
+            </div>
+            
+            <button class="btn-primary" id="checkin-btn" onclick="openCheckinModal()">
+                开始训练打卡
+            </button>
+        </div>
+        
+        <!-- 统计 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-days">0</div>
+                <div class="stat-label">累计训练(天)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-hours">0</div>
+                <div class="stat-label">累计时长(小时)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="streak-days">0</div>
+                <div class="stat-label">连续打卡(天)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="week-progress">0%</div>
+                <div class="stat-label">本周完成</div>
+            </div>
+        </div>
+        
+        <!-- 日历 -->
+        <div class="calendar-card">
+            <div class="calendar-title">📊 本月打卡日历</div>
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+        
+        <!-- 最新心得 -->
+        <div class="notes-card">
+            <div class="notes-title">📝 最新训练心得</div>
+            <div id="recent-notes">
+                <div style="color: #999; text-align: center; padding: 20px;">
+                    还没有记录，快去训练吧！
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 统计页面 -->
+    <div id="stats-page" class="page">
+        <div class="header">
+            <h1>📊 能力分析</h1>
+        </div>
+        
+        <div class="radar-card">
+            <div class="radar-title">五项能力评估</div>
+            <div id="ability-list">
+                <div class="ability-item">
+                    <div class="ability-name">步伐</div>
+                    <div class="ability-bar"><div class="ability-fill medium" style="width: 60%"></div></div>
+                    <div class="ability-score">3/5</div>
+                </div>
+                <div class="ability-item">
+                    <div class="ability-name">防守</div>
+                    <div class="ability-bar"><div class="ability-fill medium" style="width: 60%"></div></div>
+                    <div class="ability-score">3/5</div>
+                </div>
+                <div class="ability-item">
+                    <div class="ability-name">进攻</div>
+                    <div class="ability-bar"><div class="ability-fill low" style="width: 20%"></div></div>
+                    <div class="ability-score">1/5</div>
+                </div>
+                <div class="ability-item">
+                    <div class="ability-name">心理</div>
+                    <div class="ability-bar"><div class="ability-fill low" style="width: 40%"></div></div>
+                    <div class="ability-score">2/5</div>
+                </div>
+                <div class="ability-item">
+                    <div class="ability-name">技术</div>
+                    <div class="ability-bar"><div class="ability-fill low" style="width: 40%"></div></div>
+                    <div class="ability-score">2/5</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="notes-card">
+            <div class="notes-title">🎯 阶段目标</div>
+            <div class="note-item">
+                <div class="note-date">阶段1 (1-3月)</div>
+                <div class="note-content">步伐4分，技术3分，打好基础</div>
+            </div>
+            <div class="note-item">
+                <div class="note-date">阶段2 (4-6月)</div>
+                <div class="note-content">技术4分，进攻2分，提升技术</div>
+            </div>
+            <div class="note-item">
+                <div class="note-date">阶段3 (7-9月)</div>
+                <div class="note-content">进攻3分，防守4分，心理3分</div>
+            </div>
+            <div class="note-item">
+                <div class="note-date">阶段4 (10-12月)</div>
+                <div class="note-content">全面达到5级水平</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 心得页面 -->
+    <div id="notes-page" class="page">
+        <div class="header">
+            <h1>📝 训练心得</h1>
+        </div>
+        
+        <div id="all-notes">
+            <div style="color: #999; text-align: center; padding: 40px;">
+                还没有记录，快去训练吧！
+            </div>
+        </div>
+    </div>
+    
+    <!-- 我的页面 -->
+    <div id="profile-page" class="page">
+        <div class="header">
+            <h1>👤 我的</h1>
+        </div>
+        
+        <div class="today-card">
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 48px;">🏸</div>
+                <div style="font-size: 18px; font-weight: 600; margin-top: 10px;">中羽4级选手</div>
+                <div style="font-size: 13px; color: #666; margin-top: 4px;">目标：5.5级</div>
+            </div>
+        </div>
+        
+        <div class="notes-card">
+            <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">📅 训练计划</div>
+            <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">📊 数据统计</div>
+            <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">⚙️ 设置</div>
+            <div style="padding: 12px 0;">❓ 帮助</div>
+        </div>
+    </div>
+    
+    <!-- 打卡弹窗 -->
+    <div id="checkin-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">✅ 训练打卡</div>
+            
+            <div class="form-group">
+                <label class="form-label">训练时长（分钟）</label>
+                <input type="number" class="form-input" id="train-duration" placeholder="60">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">训练内容</label>
+                <input type="text" class="form-input" id="train-content" placeholder="如：米字步、高远球">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">训练心得 / 对抗总结</label>
+                <textarea class="form-textarea" id="train-note" placeholder="记录今天的训练感受、技术改进、对抗心得..."></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('checkin')">取消</button>
+                <button class="btn btn-primary" onclick="submitCheckin()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">提交打卡</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('checkin')">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">打卡</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('stats')">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">统计</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('notes')">
+            <div class="nav-icon">📝</div>
+            <div class="nav-label">心得</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('profile')">
+            <div class="nav-icon">👤</div>
+            <div class="nav-label">我的</div>
+        </div>
+    </div>
+    
+    <script>
+        // 训练计划数据
+        const trainingPlan = {
+            1: { // 周一
+                type: '基础训练',
+                items: [
+                    { name: '热身运动', detail: '慢跑5分钟+拉伸5分钟' },
+                    { name: '米字步练习', detail: '5组，每组1分钟' },
+                    { name: '高远球挥拍', detail: '100次，注意动作规范' },
+                    { name: '深蹲力量', detail: '3组×15次' },
+                    { name: '跳绳', detail: '5组×1分钟' }
+                ]
+            },
+            2: { // 周二
+                type: '对抗实战',
+                items: [
+                    { name: '热身', detail: '10分钟' },
+                    { name: '单打对抗', detail: '2局，专注防守' },
+                    { name: '双打对抗', detail: '轮换搭档' },
+                    { name: '总结', detail: '记录弱点' }
+                ]
+            },
+            3: { // 周三
+                type: '基础训练',
+                items: [
+                    { name: '热身', detail: '10分钟' },
+                    { name: '米字步', detail: '5组' },
+                    { name: '吊球挥拍', detail: '50次' },
+                    { name: '平板支撑', detail: '3组×1分钟' },
+                    { name: '手腕力量', detail: '3组×20次' }
+                ]
+            },
+            4: { // 周四
+                type: '对抗实战',
+                items: [
+                    { name: '热身', detail: '10分钟' },
+                    { name: '单打对抗', detail: '2局' },
+                    { name: '网前练习', detail: '搓球+挑球' },
+                    { name: '总结', detail: '记录心得' }
+                ]
+            },
+            5: { // 周五
+                type: '基础训练',
+                items: [
+                    { name: '热身', detail: '10分钟' },
+                    { name: '杀球挥拍', detail: '50次' },
+                    { name: '挑球练习', detail: '50次' },
+                    { name: '核心力量', detail: '卷腹+俄罗斯转体' },
+                    { name: '冥想放松', detail: '10分钟' }
+                ]
+            },
+            6: { // 周六
+                type: '综合训练',
+                items: [
+                    { name: '热身', detail: '10分钟' },
+                    { name: '全场步法', detail: '5组' },
+                    { name: '综合挥拍', detail: '高远+吊球+杀球' },
+                    { name: '力量训练', detail: '全身' },
+                    { name: '拉伸放松', detail: '15分钟' }
+                ]
+            },
+            0: { // 周日
+                type: '休息日',
+                items: [
+                    { name: '休息恢复', detail: '轻度拉伸' },
+                    { name: '观看比赛', detail: '学习高手技术' },
+                    { name: '总结本周', detail: '记录进步和不足' }
+                ]
+            }
+        };
+        
+        // 数据存储
+        let checkinData = JSON.parse(localStorage.getItem('badminton_checkin') || '[]');
+        let notesData = JSON.parse(localStorage.getItem('badminton_notes') || '[]');
+        
+        // 初始化
+        function init() {
+            renderTodayTraining();
+            renderCalendar();
+            updateStats();
+            renderNotes();
+        }
+        
+        // 渲染今日训练
+        function renderTodayTraining() {
+            const day = new Date().getDay();
+            const plan = trainingPlan[day];
+            
+            document.getElementById('today-type').textContent = plan.type;
+            
+            const list = document.getElementById('training-list');
+            list.innerHTML = plan.items.map((item, index) => `
+                <div class="training-item">
+                    <div class="training-check" onclick="toggleCheck(this, ${index})"></div>
+                    <div class="training-info">
+                        <div class="training-name">${item.name}</div>
+                        <div class="training-detail">${item.detail}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 切换选中
+        function toggleCheck(el, index) {
+            el.classList.toggle('completed');
+            el.textContent = el.classList.contains('completed') ? '✓' : '';
+        }
+        
+        // 渲染日历
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            
+            let html = days.map(d => `<div style="font-size: 11px; color: #999;">${d}</div>`).join('');
+            
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div></div>';
+            }
+            
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasCheckin = checkinData.some(c => c.date === dateStr);
+                const isToday = d === today.getDate();
+                
+                html += `<div class="calendar-day ${hasCheckin ? 'completed' : ''} ${isToday ? 'today' : ''}">${d}</div>`;
+            }
+            
+            grid.innerHTML = html;
+        }
+        
+        // 更新统计
+        function updateStats() {
+            document.getElementById('total-days').textContent = checkinData.length;
+            
+            const totalHours = checkinData.reduce((sum, c) => sum + (parseInt(c.duration) || 0), 0) / 60;
+            document.getElementById('total-hours').textContent = Math.round(totalHours);
+            
+            // 计算连续打卡
+            let streak = 0;
+            const today = new Date();
+            for (let i = 0; i < 365; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                if (checkinData.some(c => c.date === dateStr)) {
+                    streak++;
+                } else if (i > 0) {
+                    break;
+                }
+            }
+            document.getElementById('streak-days').textContent = streak;
+            
+            // 本周进度
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            let weekCount = 0;
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                if (checkinData.some(c => c.date === dateStr)) weekCount++;
+            }
+            document.getElementById('week-progress').textContent = Math.round(weekCount / 7 * 100) + '%';
+        }
+        
+        // 渲染心得
+        function renderNotes() {
+            const recentNotes = document.getElementById('recent-notes');
+            const allNotes = document.getElementById('all-notes');
+            
+            if (notesData.length === 0) return;
+            
+            const sortedNotes = [...notesData].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            recentNotes.innerHTML = sortedNotes.slice(0, 3).map(note => `
+                <div class="note-item">
+                    <div class="note-date">${note.date} · ${note.type}</div>
+                    <div class="note-content">${note.content.substring(0, 50)}${note.content.length > 50 ? '...' : ''}</div>
+                </div>
+            `).join('');
+            
+            allNotes.innerHTML = sortedNotes.map(note => `
+                <div class="notes-card" style="margin-bottom: 12px;">
+                    <div class="note-date">${note.date} · ${note.type} · ${note.duration}分钟</div>
+                    <div style="margin-top: 8px; font-size: 13px;">${note.content}</div>
+                </div>
+            `).join('');
+        }
+        
+        // 页面切换
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(page + '-page').classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            const pageIndex = ['checkin', 'stats', 'notes', 'profile'].indexOf(page);
+            if (pageIndex >= 0) navItems[pageIndex].classList.add('active');
+        }
+        
+        // 打开弹窗
+        function openCheckinModal() {
+            document.getElementById('checkin-modal').classList.add('active');
+        }
+        
+        // 关闭弹窗
+        function closeModal(type) {
+            document.getElementById(type + '-modal').classList.remove('active');
+        }
+        
+        // 提交打卡
+        function submitCheckin() {
+            const duration = document.getElementById('train-duration').value;
+            const content = document.getElementById('train-content').value;
+            const note = document.getElementById('train-note').value;
+            
+            if (!duration) {
+                alert('请填写训练时长');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const day = new Date().getDay();
+            
+            checkinData.push({
+                date: today,
+                duration: duration,
+                content: content,
+                type: trainingPlan[day].type
+            });
+            
+            if (note) {
+                notesData.push({
+                    date: today,
+                    type: trainingPlan[day].type,
+                    duration: duration,
+                    content: note
+                });
+            }
+            
+            localStorage.setItem('badminton_checkin', JSON.stringify(checkinData));
+            localStorage.setItem('badminton_notes', JSON.stringify(notesData));
+            
+            closeModal('checkin');
+            
+            // 清空表单
+            document.getElementById('train-duration').value = '';
+            document.getElementById('train-content').value = '';
+            document.getElementById('train-note').value = '';
+            
+            // 刷新
+            init();
+            
+            alert('打卡成功！继续加油！💪');
+        }
+        
+        // 点击弹窗外部关闭
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) closeModal('checkin');
+            });
+        });
+        
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
