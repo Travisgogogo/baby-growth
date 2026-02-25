@@ -20,9 +20,19 @@ jobs:
     
     - name: Generate Android project
       run: |
-        # Generate Android project files
-        flutter config --enable-android
-        flutter create --platforms=android --org=com.example .
+        # Save current project files
+        mkdir -p /tmp/project_backup
+        cp -r lib pubspec.yaml /tmp/project_backup/ 2>/dev/null || true
+        
+        # Create new Flutter project with Android support in temp dir
+        cd /tmp
+        flutter create --platforms=android --project-name=baby_growth temp_proj
+        
+        # Copy generated android directory to workspace
+        cp -r /tmp/temp_proj/android ${{ github.workspace }}/
+        
+        # Clean up
+        rm -rf /tmp/temp_proj /tmp/project_backup
     
     - name: Get dependencies
       run: flutter pub get
