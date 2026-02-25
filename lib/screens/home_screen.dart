@@ -461,55 +461,57 @@ class _HomeScreenState extends State<HomeScreen> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('🍼 记录喂奶'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: '母乳', label: Text('母乳')),
-                ButtonSegment(value: '奶粉', label: Text('奶粉')),
-                ButtonSegment(value: '辅食', label: Text('辅食')),
-              ],
-              selected: {feedType},
-              onSelectionChanged: (set) {
-                setState(() => feedType = set.first);
-              },
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '量（ml或g）',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('🍼 记录喂奶'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: '母乳', label: Text('母乳')),
+                  ButtonSegment(value: '奶粉', label: Text('奶粉')),
+                  ButtonSegment(value: '辅食', label: Text('辅食')),
+                ],
+                selected: {feedType},
+                onSelectionChanged: (set) {
+                  setDialogState(() => feedType = set.first);
+                },
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '量（ml或g）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (amountController.text.isNotEmpty && _baby != null) {
+                  final record = FeedRecord(
+                    babyId: _baby!.id!,
+                    type: feedType,
+                    amount: double.tryParse(amountController.text) ?? 0,
+                    time: DateTime.now(),
+                  );
+                  await DatabaseService.instance.createFeedRecord(record);
+                  await _loadBabyData(_baby!.id!);
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('保存'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (amountController.text.isNotEmpty && _baby != null) {
-                final record = FeedRecord(
-                  babyId: _baby!.id!,
-                  type: feedType,
-                  amount: double.tryParse(amountController.text) ?? 0,
-                  time: DateTime.now(),
-                );
-                await DatabaseService.instance.createFeedRecord(record);
-                await _loadBabyData(_baby!.id!);
-                if (mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
   }
@@ -545,39 +547,41 @@ class _HomeScreenState extends State<HomeScreen> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('💩 记录换尿布'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: '湿尿', label: Text('湿尿')),
-                ButtonSegment(value: '大便', label: Text('大便')),
-                ButtonSegment(value: '两者', label: Text('两者')),
-              ],
-              selected: {diaperType},
-              onSelectionChanged: (set) {
-                setState(() => diaperType = set.first);
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('💩 记录换尿布'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: '湿尿', label: Text('湿尿')),
+                  ButtonSegment(value: '大便', label: Text('大便')),
+                  ButtonSegment(value: '两者', label: Text('两者')),
+                ],
+                selected: {diaperType},
+                onSelectionChanged: (set) {
+                  setDialogState(() => diaperType = set.first);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$diaperType 尿布记录已保存')),
+                );
               },
+              child: const Text('保存'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$diaperType 尿布记录已保存')),
-              );
-            },
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
   }
