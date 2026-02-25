@@ -91,7 +91,13 @@ class _HomeScreenState extends State<HomeScreen> {
       body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          // 切换到首页或我的页面时刷新数据
+          if (index == 0 || index == 5) {
+            _loadData();
+          }
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF667eea),
         unselectedItemColor: Colors.grey,
