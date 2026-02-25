@@ -36,7 +36,33 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     }
   }
 
-  List<FlSpot> _getChartData() {
+  // 获取最新记录的数据
+  String _getLatestWeight() {
+    if (_records.isEmpty) return '--';
+    final record = _records.firstWhere(
+      (r) => r.weight != null,
+      orElse: () => _records.first,
+    );
+    return record.weight?.toStringAsFixed(1) ?? '--';
+  }
+
+  String _getLatestHeight() {
+    if (_records.isEmpty) return '--';
+    final record = _records.firstWhere(
+      (r) => r.height != null,
+      orElse: () => _records.first,
+    );
+    return record.height?.toStringAsFixed(0) ?? '--';
+  }
+
+  String _getLatestHeadCircumference() {
+    if (_records.isEmpty) return '--';
+    final record = _records.firstWhere(
+      (r) => r.headCircumference != null,
+      orElse: () => _records.first,
+    );
+    return record.headCircumference?.toStringAsFixed(0) ?? '--';
+  }
     if (_records.isEmpty || _baby == null) return [];
     
     final now = DateTime.now();
@@ -106,15 +132,15 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildMetricButton('weight', '体重', '${_baby?.birthWeight?.toStringAsFixed(1) ?? "--"} kg'),
+                  child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg'),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildMetricButton('height', '身高', '${_baby?.birthHeight?.toStringAsFixed(0) ?? "--"} cm'),
+                  child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm'),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildMetricButton('head', '头围', '${_baby?.birthHeadCircumference?.toStringAsFixed(0) ?? "--"} cm'),
+                  child: _buildMetricButton('head', '头围', '${_getLatestHeadCircumference()} cm'),
                 ),
               ],
             ),
