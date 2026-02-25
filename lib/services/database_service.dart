@@ -7,6 +7,7 @@ import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
 import '../models/milestone_record.dart';
 import '../models/photo.dart';
+import '../models/illness_record.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -117,6 +118,20 @@ class DatabaseService {
         FOREIGN KEY (babyId) REFERENCES babies (id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE illness_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        babyId INTEGER NOT NULL,
+        startTime TEXT NOT NULL,
+        endTime TEXT,
+        symptom TEXT NOT NULL,
+        temperature REAL,
+        description TEXT,
+        treatment TEXT,
+        FOREIGN KEY (babyId) REFERENCES babies (id)
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -164,6 +179,20 @@ class DatabaseService {
           path TEXT NOT NULL,
           takenAt TEXT NOT NULL,
           description TEXT,
+          FOREIGN KEY (babyId) REFERENCES babies (id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE illness_records (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          babyId INTEGER NOT NULL,
+          startTime TEXT NOT NULL,
+          endTime TEXT,
+          symptom TEXT NOT NULL,
+          temperature REAL,
+          description TEXT,
+          treatment TEXT,
           FOREIGN KEY (babyId) REFERENCES babies (id)
         )
       ''');
@@ -348,6 +377,39 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [record.id],
     );
+  }
+
+  // Illness record operations
+  Future<IllnessRecord> createIllnessRecord(IllnessRecord record) async {
+    final db = await database;
+    final id = await db.insert('illness_records', record.toMap());
+    return record.copyWith(id: id);
+  }
+
+  Future<List<IllnessRecord>> getIllnessRecords(int babyId) async {
+    final db = await database;
+    final maps = await db.query(
+      'illness_records',
+      where: 'babyId = ?',
+      whereArgs: [babyId],
+      orderBy: 'startTime DESC',
+    );
+    return maps.map((map) => IllnessRecord.fromMap(map)).toList();
+  }
+
+  Future<void> updateIllnessRecord(IllnessRecord record) async {
+    final db = await database;
+    await db.update(
+      'illness_records',
+      record.toMap(),
+      where: 'id = ?',
+      whereArgs: [record.id],
+    );
+  }
+
+  Future<void> deleteIllnessRecord(int id) async {
+    final db = await database;
+    await db.delete('illness_records', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {
