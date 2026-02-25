@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
     - uses: actions/checkout@v4
@@ -24,82 +25,83 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
-    - name: Build APK
+    - name: Prepare simple app
       run: |
         # Create a simple main.dart without database
-        cat > lib/main.dart << 'EOF'
-import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '宝宝成长记',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF667eea),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('宝宝成长记'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: const Center(
-        child: Text('欢迎使用宝宝成长记 App'),
-      ),
-    );
-  }
-}
-EOF
+        cat > lib/main.dart << 'ENDOFFILE'
+        import 'package:flutter/material.dart';
+        
+        void main() {
+          runApp(const MyApp());
+        }
+        
+        class MyApp extends StatelessWidget {
+          const MyApp({super.key});
+        
+          @override
+          Widget build(BuildContext context) {
+            return MaterialApp(
+              title: '宝宝成长记',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF667eea),
+                  brightness: Brightness.light,
+                ),
+                useMaterial3: true,
+              ),
+              home: const HomePage(),
+            );
+          }
+        }
+        
+        class HomePage extends StatelessWidget {
+          const HomePage({super.key});
+        
+          @override
+          Widget build(BuildContext context) {
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('宝宝成长记'),
+                backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              ),
+              body: const Center(
+                child: Text('欢迎使用宝宝成长记 App'),
+              ),
+            );
+          }
+        }
+        ENDOFFILE
         
         # Create simple pubspec
-        cat > pubspec.yaml << 'EOF'
-name: baby_growth
-description: 宝宝成长记录
-publish_to: 'none'
-version: 1.0.0+1
-
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-  cupertino_icons: ^1.0.2
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-
-flutter:
-  uses-material-design: true
-EOF
+        cat > pubspec.yaml << 'ENDOFFILE'
+        name: baby_growth
+        description: 宝宝成长记录
+        publish_to: 'none'
+        version: 1.0.0+1
+        
+        environment:
+          sdk: '>=3.0.0 <4.0.0'
+        
+        dependencies:
+          flutter:
+            sdk: flutter
+          cupertino_icons: ^1.0.2
+        
+        dev_dependencies:
+          flutter_test:
+            sdk: flutter
+          flutter_lints: ^3.0.0
+        
+        flutter:
+          uses-material-design: true
+        ENDOFFILE
         
         # Remove other dart files
         rm -rf lib/models lib/services lib/screens
-        
-        # Build
+    
+    - name: Build APK
+      run: |
         flutter pub get
         flutter build apk --release
     
