@@ -27,10 +27,19 @@ jobs:
     
     - name: Create Android Project
       run: |
-        # Remove incomplete android directory if exists
-        rm -rf android
-        # Create Android platform files with overwrite flag
-        flutter create --platforms=android --overwrite .
+        # Save current project files
+        mkdir -p /tmp/project_backup
+        cp -r lib pubspec.yaml /tmp/project_backup/
+        
+        # Remove everything except .git and .github
+        find . -maxdepth 1 -not -name '.' -not -name '.git' -not -name '.github' -exec rm -rf {} \;
+        
+        # Create new Flutter project with same name
+        flutter create --project-name=baby_growth --platforms=android .
+        
+        # Restore project files
+        cp -r /tmp/project_backup/lib/* lib/
+        cp /tmp/project_backup/pubspec.yaml .
     
     - name: Build APK
       run: |
