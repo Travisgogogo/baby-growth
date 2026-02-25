@@ -26,6 +26,31 @@ jobs:
     
     - name: Build APK
       run: |
+        # Create simple pubspec without native plugins
+        cat > pubspec_simple.yaml << 'EOF'
+name: baby_growth
+description: 宝宝成长记录
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  fl_chart: ^0.65.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+EOF
+        
         # Create Flutter project
         cd /tmp
         flutter create --platforms=android myapp
@@ -34,19 +59,15 @@ jobs:
         rm -rf myapp/lib
         cp -r $GITHUB_WORKSPACE/lib myapp/
         
-        # Copy pubspec.yaml
-        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
+        # Use simple pubspec (without sqflite)
+        cp $GITHUB_WORKSPACE/pubspec_simple.yaml myapp/pubspec.yaml
         
-        # Fix minSdkVersion for sqflite
-        cd myapp/android/app
-        sed -i 's/minSdkVersion .*/minSdkVersion 21/' build.gradle
-        cd /tmp/myapp
-        
-        # Build with verbose output (like Run #27)
+        # Build
+        cd myapp
         flutter pub get
-        flutter build apk --release --verbose 2>&1 | tee build.log || true
+        flutter build apk --release
         
-        # Copy APK to workspace
+        # Copy APK
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
     - name: Upload APK
