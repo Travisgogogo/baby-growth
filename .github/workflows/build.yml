@@ -12,33 +12,38 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.24.0'
         channel: 'stable'
     
+    - name: Verify Flutter
+      run: flutter doctor -v
+    
     - name: Generate Android project
       run: |
-        # Save current project files
-        mkdir -p /tmp/project_backup
-        cp -r lib pubspec.yaml /tmp/project_backup/ 2>/dev/null || true
-        
-        # Create new Flutter project with Android support in temp dir
+        # Create Android project in temp dir
         cd /tmp
         flutter create --platforms=android --project-name=baby_growth temp_proj
         
-        # Copy generated android directory to workspace
+        # Copy generated android directory
         cp -r /tmp/temp_proj/android ${{ github.workspace }}/
         
         # Clean up
-        rm -rf /tmp/temp_proj /tmp/project_backup
+        rm -rf /tmp/temp_proj
     
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Build APK
-      run: flutter build apk --release
+    - name: Build APK with verbose output
+      run: flutter build apk --release --verbose
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
