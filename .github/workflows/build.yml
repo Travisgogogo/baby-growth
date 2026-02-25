@@ -27,6 +27,8 @@ jobs:
     
     - name: Create Android Project
       run: |
+        # Remove incomplete android directory if exists
+        rm -rf android
         # Create Android platform files
         flutter create --platforms=android .
     
