@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
 
@@ -21,10 +22,120 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadData() async {
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      setState(() {
-        _baby = babies.first;
-      });
+      setState(() => _baby = babies.first);
     }
+  }
+
+  Future<void> _backupData() async {
+    if (_baby == null) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在备份...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final babyId = _baby!.id!;
+      final backup = {
+        'version': '1.0',
+        'timestamp': DateTime.now().toIso8601String(),
+        'baby': _baby!.toMap(),
+        'growthRecords': (await DatabaseService.instance.getGrowthRecords(babyId)).map((r) => r.toMap()).toList(),
+        'feedRecords': (await DatabaseService.instance.getFeedRecords(babyId, limit: 1000)).map((r) => r.toMap()).toList(),
+        'sleepRecords': (await DatabaseService.instance.getSleepRecords(babyId)).map((r) => r.toMap()).toList(),
+        'diaperRecords': (await DatabaseService.instance.getDiaperRecords(babyId)).map((r) => r.toMap()).toList(),
+        'milestoneRecords': (await DatabaseService.instance.getMilestoneRecords(babyId)).map((r) => r.toMap()).toList(),
+      };
+      
+      final jsonStr = jsonEncode(backup);
+      
+      Navigator.pop(context);
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('备份成功'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('请将以下备份代码保存到安全的地方：'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  base64Encode(utf8.encode(jsonStr)).substring(0, 100) + '...',
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('复制'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('备份失败: $e')),
+      );
+    }
+  }
+
+  void _restoreData() {
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('数据恢复'),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: '请输入备份代码',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // TODO: Implement actual restore
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('恢复功能开发中')),
+              );
+            },
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -37,43 +148,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: ListView(
         children: [
-          // 宝宝信息卡片
           _buildBabyCard(),
-          
           const SizedBox(height: 16),
-          
-          // 功能列表
-          _buildSectionTitle('宝宝管理'),
-          _buildMenuItem(Icons.child_care, '宝宝资料', () => _editBabyProfile()),
-          _buildMenuItem(Icons.swap_horiz, '切换宝宝', () => _switchBaby()),
-          _buildMenuItem(Icons.add_circle, '添加宝宝', () => _addBaby()),
-          
+          _buildSectionTitle('数据管理'),
+          _buildMenuItem(Icons.backup, '数据备份', _backupData),
+          _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
+          _buildMenuItem(Icons.share, '分享成长', () {}),
           const SizedBox(height: 16),
-          
-          _buildSectionTitle('设置'),
-          _buildMenuItem(Icons.notifications, '提醒设置', () => _showReminderSettings()),
-          _buildMenuItem(Icons.backup, '数据备份', () => _backupData()),
-          _buildMenuItem(Icons.restore, '数据恢复', () => _restoreData()),
-          _buildMenuItem(Icons.share, '分享成长', () => _shareGrowth()),
-          
-          const SizedBox(height: 16),
-          
           _buildSectionTitle('关于'),
-          _buildMenuItem(Icons.help, '使用帮助', () => _showHelp()),
-          _buildMenuItem(Icons.star, '给我们评分', () => _rateApp()),
-          _buildMenuItem(Icons.info, '关于我们', () => _showAbout()),
-          
+          _buildMenuItem(Icons.info, '关于我们', () {}),
           const SizedBox(height: 32),
-          
-          // 版本号
           Center(
-            child: Text(
-              '宝宝成长记 v1.0.0',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-              ),
-            ),
+            child: Text('宝宝成长记 v1.0.0', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           ),
           const SizedBox(height: 32),
         ],
@@ -94,12 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Center(
-          child: Text(
-            '暂无宝宝信息',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
+        child: const Center(child: Text('暂无宝宝信息', style: TextStyle(color: Colors.white))),
       );
     }
 
@@ -116,52 +197,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-            ),
-            child: const Center(
-              child: Text('👶', style: TextStyle(fontSize: 32)),
-            ),
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            child: Text(_baby!.name[0], style: const TextStyle(fontSize: 32, color: Colors.white)),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _baby!.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(_baby!.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 4),
-                Text(
-                  '${_baby!.gender}宝 · ${_baby!.ageDisplay}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '出生: ${_formatDate(_baby!.birthDate)}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
-                ),
+                Text('${_baby!.gender} · ${_baby!.ageDisplay}', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
               ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () => _editBabyProfile(),
           ),
         ],
       ),
@@ -171,14 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey.shade600,
-        ),
-      ),
+      child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
     );
   }
 
@@ -186,268 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF667eea)),
       title: Text(title),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
-  }
-
-  void _editBabyProfile() {
-    if (_baby == null) return;
-    
-    final nameController = TextEditingController(text: _baby!.name);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('编辑宝宝资料'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: '宝宝姓名',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              setState(() {
-                _baby = _baby!.copyWith(name: nameController.text);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('资料已更新')),
-              );
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _switchBaby() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('切换宝宝'),
-        content: const Text('当前只有一个宝宝'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addBaby() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('添加宝宝'),
-        content: const Text('添加多个宝宝功能即将上线'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReminderSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('提醒设置'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              title: const Text('喂奶提醒'),
-              value: true,
-              onChanged: (v) {},
-            ),
-            SwitchListTile(
-              title: const Text('睡眠提醒'),
-              value: false,
-              onChanged: (v) {},
-            ),
-            SwitchListTile(
-              title: const Text('里程碑提醒'),
-              value: true,
-              onChanged: (v) {},
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _backupData() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('数据备份'),
-        content: const Text('数据已备份到本地'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _restoreData() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('数据恢复'),
-        content: const Text('请选择备份文件'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('数据已恢复')),
-              );
-            },
-            child: const Text('恢复'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _shareGrowth() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('分享成长'),
-        content: const Text('生成成长报告并分享'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已生成分享图片')),
-              );
-            },
-            child: const Text('生成'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelp() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('使用帮助'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('1. 首页可以快捷记录喂奶、睡眠等'),
-              SizedBox(height: 8),
-              Text('2. 生长曲线查看宝宝发育趋势'),
-              SizedBox(height: 8),
-              Text('3. 里程碑记录宝宝成长时刻'),
-              SizedBox(height: 8),
-              Text('4. 数据自动保存到本地'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _rateApp() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('给我们评分'),
-        content: const Text('如果您喜欢我们的应用，请给我们五星好评！'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('感谢您的支持！')),
-              );
-            },
-            child: const Text('去评分'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAbout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('关于我们'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('👶 宝宝成长记', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('记录宝宝成长的每一个瞬间'),
-            SizedBox(height: 16),
-            Text('版本: 1.0.0', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
   }
 }
