@@ -42,12 +42,12 @@ jobs:
         sed -i 's/minSdkVersion .*/minSdkVersion 21/' build.gradle
         cd /tmp/myapp
         
-        # Build
+        # Build with verbose output (like Run #27)
         flutter pub get
-        flutter build apk --release
+        flutter build apk --release --verbose 2>&1 | tee build.log || true
         
-        # Move APK to workspace for upload
-        mv build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
+        # Copy APK to workspace
+        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
