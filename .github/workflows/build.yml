@@ -26,23 +26,21 @@ jobs:
     
     - name: Build APK
       run: |
-        # Create a new Flutter project with all platforms
+        # Create new Flutter project with Android support
         cd /tmp
-        flutter create --project-name=baby_growth temp_project
+        flutter create --platforms=android --project-name=baby_growth temp_project
         
-        # Replace the lib directory with our code
+        # Copy our code
         rm -rf temp_project/lib
         cp -r ${{ github.workspace }}/lib temp_project/
-        
-        # Replace pubspec.yaml
         cp ${{ github.workspace }}/pubspec.yaml temp_project/
         
-        # Build APK in the temp project
+        # Build
         cd temp_project
         flutter pub get
         flutter build apk --release
         
-        # Copy the built APK back
+        # Copy APK back
         mkdir -p ${{ github.workspace }}/build/app/outputs/flutter-apk/
         cp build/app/outputs/flutter-apk/app-release.apk ${{ github.workspace }}/build/app/outputs/flutter-apk/
     
