@@ -54,6 +54,178 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
     }
   }
 
+  Future<void> _deleteFeedRecord(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条喂养记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await DatabaseService.instance.deleteFeedRecord(id);
+      await _loadData();
+    }
+  }
+
+  Future<void> _deleteGrowthRecord(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条生长记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await DatabaseService.instance.deleteGrowthRecord(id);
+      await _loadData();
+    }
+  }
+
+  Future<void> _deleteSleepRecord(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条睡眠记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await DatabaseService.instance.deleteSleepRecord(id);
+      await _loadData();
+    }
+  }
+
+  Future<void> _deleteDiaperRecord(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条换尿布记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await DatabaseService.instance.deleteDiaperRecord(id);
+      await _loadData();
+    }
+  }
+
+  void _editFeedRecord(FeedRecord record) {
+    final amountController = TextEditingController(text: record.amount?.toString());
+    String type = record.type;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑喂养记录'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: '母乳', label: Text('母乳')),
+                  ButtonSegment(value: '奶粉', label: Text('奶粉')),
+                  ButtonSegment(value: '辅食', label: Text('辅食')),
+                ],
+                selected: {type},
+                onSelectionChanged: (set) => setDialogState(() => type = set.first),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '量（ml或g）', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+            FilledButton(
+              onPressed: () async {
+                final updated = record.copyWith(
+                  type: type,
+                  amount: double.tryParse(amountController.text),
+                );
+                await DatabaseService.instance.updateFeedRecord(updated);
+                Navigator.pop(context);
+                await _loadData();
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editGrowthRecord(GrowthRecord record) {
+    final weightController = TextEditingController(text: record.weight?.toString());
+    final heightController = TextEditingController(text: record.height?.toString());
+    final headController = TextEditingController(text: record.headCircumference?.toString());
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('编辑生长记录'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: weightController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '体重 (kg)', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: heightController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '身高 (cm)', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: headController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '头围 (cm)', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          FilledButton(
+            onPressed: () async {
+              final updated = record.copyWith(
+                weight: double.tryParse(weightController.text),
+                height: double.tryParse(heightController.text),
+                headCircumference: double.tryParse(headController.text),
+              );
+              await DatabaseService.instance.updateGrowthRecord(updated);
+              Navigator.pop(context);
+              await _loadData();
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,10 +266,25 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
       itemCount: _feedRecords.length,
       itemBuilder: (context, index) {
         final record = _feedRecords[index];
-        return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.restaurant)),
-          title: Text('${record.type} ${record.amount?.toInt()}ml'),
-          subtitle: Text('${_formatTime(record.time)}'),
+        return Dismissible(
+          key: Key('feed_${record.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          onDismissed: (_) => _deleteFeedRecord(record.id!),
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.restaurant)),
+            title: Text('${record.type} ${record.amount?.toInt()}ml'),
+            subtitle: Text(_formatTime(record.time)),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, size: 18),
+              onPressed: () => _editFeedRecord(record),
+            ),
+          ),
         );
       },
     );
@@ -111,10 +298,25 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
       itemCount: _growthRecords.length,
       itemBuilder: (context, index) {
         final record = _growthRecords[index];
-        return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.trending_up)),
-          title: Text('${record.weight?.toStringAsFixed(1)}kg, ${record.height?.toStringAsFixed(0)}cm'),
-          subtitle: Text('${_formatDate(record.date)}'),
+        return Dismissible(
+          key: Key('growth_${record.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          onDismissed: (_) => _deleteGrowthRecord(record.id!),
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.trending_up)),
+            title: Text('${record.weight?.toStringAsFixed(1)}kg, ${record.height?.toStringAsFixed(0)}cm'),
+            subtitle: Text(_formatDate(record.date)),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, size: 18),
+              onPressed: () => _editGrowthRecord(record),
+            ),
+          ),
         );
       },
     );
@@ -131,10 +333,21 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
         final duration = record.endTime != null 
             ? record.endTime!.difference(record.startTime).inMinutes 
             : null;
-        return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.bedtime)),
-          title: Text(duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中'),
-          subtitle: Text('${_formatTime(record.startTime)}'),
+        return Dismissible(
+          key: Key('sleep_${record.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          onDismissed: (_) => _deleteSleepRecord(record.id!),
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.bedtime)),
+            title: Text(duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中'),
+            subtitle: Text(_formatTime(record.startTime)),
+          ),
         );
       },
     );
@@ -148,10 +361,21 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
       itemCount: _diaperRecords.length,
       itemBuilder: (context, index) {
         final record = _diaperRecords[index];
-        return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.baby_changing_station)),
-          title: Text(record.type),
-          subtitle: Text('${_formatTime(record.time)}'),
+        return Dismissible(
+          key: Key('diaper_${record.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          onDismissed: (_) => _deleteDiaperRecord(record.id!),
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.baby_changing_station)),
+            title: Text(record.type),
+            subtitle: Text(_formatTime(record.time)),
+          ),
         );
       },
     );
@@ -162,6 +386,6 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
   }
 
   String _formatDate(DateTime date) {
-    return '${date.month}月${date.day}日';
+    return '${date.year}年${date.month}月${date.day}日';
   }
 }
