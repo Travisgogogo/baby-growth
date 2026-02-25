@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
+import '../models/sleep_record.dart';
+import '../models/diaper_record.dart';
 import '../services/database_service.dart';
 import 'growth_chart_screen.dart';
 import 'records_screen.dart';
@@ -528,12 +530,21 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
-              // TODO: Implement sleep tracking
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('睡眠记录已保存')),
-              );
+            onPressed: () async {
+              if (_baby != null) {
+                final record = SleepRecord(
+                  babyId: _baby!.id!,
+                  startTime: DateTime.now(),
+                );
+                await DatabaseService.instance.createSleepRecord(record);
+                await _loadBabyData(_baby!.id!);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('睡眠记录已保存')),
+                  );
+                }
+              }
             },
             child: const Text('开始睡眠'),
           ),
@@ -572,11 +583,22 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('取消'),
             ),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$diaperType 尿布记录已保存')),
-                );
+              onPressed: () async {
+                if (_baby != null) {
+                  final record = DiaperRecord(
+                    babyId: _baby!.id!,
+                    time: DateTime.now(),
+                    type: diaperType,
+                  );
+                  await DatabaseService.instance.createDiaperRecord(record);
+                  await _loadBabyData(_baby!.id!);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$diaperType 尿布记录已保存')),
+                    );
+                  }
+                }
               },
               child: const Text('保存'),
             ),
