@@ -8,6 +8,7 @@ import '../models/diaper_record.dart';
 import '../models/milestone_record.dart';
 import '../models/photo.dart';
 import '../models/illness_record.dart';
+import '../models/vaccine_record.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -129,6 +130,19 @@ class DatabaseService {
         temperature REAL,
         description TEXT,
         treatment TEXT,
+        FOREIGN KEY (babyId) REFERENCES babies (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE vaccine_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        babyId INTEGER NOT NULL,
+        vaccineId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        scheduledTime TEXT NOT NULL,
+        completed INTEGER DEFAULT 0,
+        completedDate TEXT,
         FOREIGN KEY (babyId) REFERENCES babies (id)
       )
     ''');
@@ -420,6 +434,34 @@ class DatabaseService {
   Future<void> deleteIllnessRecord(int id) async {
     final db = await database;
     await db.delete('illness_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Vaccine record operations
+  Future<VaccineRecord> createVaccineRecord(VaccineRecord record) async {
+    final db = await database;
+    final id = await db.insert('vaccine_records', record.toMap());
+    return record.copyWith(id: id);
+  }
+
+  Future<List<VaccineRecord>> getVaccineRecords(int babyId) async {
+    final db = await database;
+    final maps = await db.query(
+      'vaccine_records',
+      where: 'babyId = ?',
+      whereArgs: [babyId],
+      orderBy: 'scheduledTime ASC',
+    );
+    return maps.map((map) => VaccineRecord.fromMap(map)).toList();
+  }
+
+  Future<void> updateVaccineRecord(VaccineRecord record) async {
+    final db = await database;
+    await db.update(
+      'vaccine_records',
+      record.toMap(),
+      where: 'id = ?',
+      whereArgs: [record.id],
+    );
   }
 
   Future close() async {
