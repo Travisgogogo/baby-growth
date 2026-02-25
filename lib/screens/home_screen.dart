@@ -4,6 +4,7 @@ import '../models/growth_record.dart';
 import '../models/feed_record.dart';
 import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
+import '../models/milestone_record.dart';
 import '../services/database_service.dart';
 import 'growth_chart_screen.dart';
 import 'records_screen.dart';
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Baby? _baby;
   GrowthRecord? _latestGrowth;
   List<FeedRecord> _recentFeeds = [];
+  List<MilestoneRecord> _milestoneRecords = [];
   int _currentIndex = 0;
   bool _isLoading = true;
 
@@ -39,21 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _baby = babies.first;
       });
       await _loadBabyData(babies.first.id!);
-    } else {
-      final newBaby = await DatabaseService.instance.createBaby(
-        Baby(
-          name: '小汤圆',
-          birthDate: DateTime.now().subtract(const Duration(days: 255)),
-          gender: '女',
-          birthWeight: 3.2,
-          birthHeight: 50,
-          birthHeadCircumference: 34,
-        ),
-      );
-      setState(() {
-        _baby = newBaby;
-      });
-      await _loadBabyData(newBaby.id!);
     }
     setState(() => _isLoading = false);
   }
@@ -61,12 +48,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadBabyData(int babyId) async {
     final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
     final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
+    final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
 
     setState(() {
       if (growthRecords.isNotEmpty) {
         _latestGrowth = growthRecords.first;
       }
       _recentFeeds = feedRecords;
+      _milestoneRecords = milestoneRecords;
     });
   }
 
@@ -117,6 +106,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+    if (_baby == null) {
+      return _buildEmptyState();
+    }
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -126,6 +118,143 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildGrowthChart(),
             _buildRecentRecords(),
             _buildMilestones(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.child_care, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('欢迎使用宝宝成长记', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('请先添加宝宝信息', style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _showAddBabyDialog,
+            icon: const Icon(Icons.add),
+            label: const Text('添加宝宝'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddBabyDialog() {
+    final nameController = TextEditingController();
+    final weightController = TextEditingController();
+    final heightController = TextEditingController();
+    final headController = TextEditingController();
+    String gender = '女';
+    DateTime birthDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('添加宝宝'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: '宝宝姓名',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: birthDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => birthDate = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: '出生日期',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text('${birthDate.year}年${birthDate.month}月${birthDate.day}日'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: '男', label: Text('男')),
+                    ButtonSegment(value: '女', label: Text('女')),
+                  ],
+                  selected: {gender},
+                  onSelectionChanged: (set) => setDialogState(() => gender = set.first),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生体重 (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: heightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生身高 (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: headController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '出生头围 (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty) {
+                  final newBaby = await DatabaseService.instance.createBaby(
+                    Baby(
+                      name: nameController.text,
+                      birthDate: birthDate,
+                      gender: gender,
+                      birthWeight: double.tryParse(weightController.text),
+                      birthHeight: double.tryParse(heightController.text),
+                      birthHeadCircumference: double.tryParse(headController.text),
+                    ),
+                  );
+                  Navigator.pop(context);
+                  setState(() => _baby = newBaby);
+                  await _loadBabyData(newBaby.id!);
+                }
+              },
+              child: const Text('保存'),
+            ),
           ],
         ),
       ),
@@ -395,13 +524,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMilestones() {
-    final milestones = [
-      _Milestone('独坐稳定', true),
-      _Milestone('双手传递', true),
-      _Milestone('咿呀学语', true),
-      _Milestone('爬行', false),
-      _Milestone('理解"不"', false),
-    ];
+    final completedCount = _milestoneRecords.where((m) => m.completedDate != null).length;
+    final totalCount = 23; // 总里程碑数
+    final recentMilestones = _milestoneRecords.take(5).toList();
 
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = 3),
@@ -424,36 +549,40 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('🎯 8月龄里程碑', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('3/8 已完成 →', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
+                const Text('🎯 发育里程碑', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text('$completedCount/$totalCount 已完成 →', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
               ],
             ),
             const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: milestones.map((m) => _buildMilestoneItem(m)).toList(),
+            if (recentMilestones.isEmpty)
+              const Center(child: Text('暂无里程碑记录', style: TextStyle(color: Colors.grey, fontSize: 12)))
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: recentMilestones.map((m) => _buildMilestoneItem(m)).toList(),
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMilestoneItem(_Milestone milestone) {
+  Widget _buildMilestoneItem(MilestoneRecord milestone) {
+    final isCompleted = milestone.completedDate != null;
     return Container(
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: milestone.completed ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F7),
+        color: isCompleted ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F7),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          Text(milestone.completed ? '✅' : '⭕', style: const TextStyle(fontSize: 22)),
+          Text(isCompleted ? '✅' : '⭕', style: const TextStyle(fontSize: 22)),
           const SizedBox(height: 4),
-          Text(milestone.name, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+          Text(milestone.milestoneId, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
         ],
       ),
     );
@@ -700,11 +829,4 @@ class _ActionItem {
   final VoidCallback onTap;
 
   _ActionItem(this.label, this.icon, this.bgColor, this.onTap);
-}
-
-class _Milestone {
-  final String name;
-  final bool completed;
-
-  _Milestone(this.name, this.completed);
 }
