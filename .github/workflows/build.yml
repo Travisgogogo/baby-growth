@@ -28,12 +28,16 @@ jobs:
       run: |
         # Create new Flutter project with Android support
         cd /tmp
-        flutter create --platforms=android --project-name=baby_growth temp_project
+        flutter create --platforms=android temp_project
         
-        # Copy our code
+        # Replace lib directory
         rm -rf temp_project/lib
         cp -r ${{ github.workspace }}/lib temp_project/
-        cp ${{ github.workspace }}/pubspec.yaml temp_project/
+        
+        # Replace pubspec.yaml but keep SDK constraints
+        head -20 temp_project/pubspec.yaml > /tmp/pubspec_template.yaml
+        cat ${{ github.workspace }}/pubspec.yaml | grep -E "^(name:|description:|version:|environment:|dependencies:)" >> /tmp/pubspec_template.yaml
+        cp /tmp/pubspec_template.yaml temp_project/pubspec.yaml
         
         # Build
         cd temp_project
