@@ -234,21 +234,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             FilledButton(
               onPressed: () async {
-                final updatedBaby = _baby!.copyWith(
-                  name: nameController.text,
-                  birthDate: birthDate,
-                  gender: gender,
-                  birthWeight: double.tryParse(weightController.text),
-                  birthHeight: double.tryParse(heightController.text),
-                  birthHeadCircumference: double.tryParse(headController.text),
-                );
-                // 更新数据库
-                await DatabaseService.instance.updateBaby(updatedBaby);
-                setState(() => _baby = updatedBaby);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('资料已更新')),
-                );
+                try {
+                  final updatedBaby = _baby!.copyWith(
+                    name: nameController.text,
+                    birthDate: birthDate,
+                    gender: gender,
+                    birthWeight: double.tryParse(weightController.text),
+                    birthHeight: double.tryParse(heightController.text),
+                    birthHeadCircumference: double.tryParse(headController.text),
+                  );
+                  // 更新数据库
+                  await DatabaseService.instance.updateBaby(updatedBaby);
+                  setState(() => _baby = updatedBaby);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('资料已更新')),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('更新失败: $e')),
+                  );
+                }
               },
               child: const Text('保存'),
             ),
