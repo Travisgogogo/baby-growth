@@ -145,6 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final heightController = TextEditingController(text: _baby!.birthHeight?.toString() ?? '');
     final headController = TextEditingController(text: _baby!.birthHeadCircumference?.toString() ?? '');
     String gender = _baby!.gender;
+    DateTime birthDate = _baby!.birthDate;
     
     showDialog(
       context: context,
@@ -160,6 +161,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: const InputDecoration(
                     labelText: '宝宝姓名',
                     border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // 出生日期选择
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: birthDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => birthDate = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: '出生日期',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text('${birthDate.year}年${birthDate.month}月${birthDate.day}日'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -212,11 +236,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () async {
                 final updatedBaby = _baby!.copyWith(
                   name: nameController.text,
+                  birthDate: birthDate,
                   gender: gender,
                   birthWeight: double.tryParse(weightController.text),
                   birthHeight: double.tryParse(heightController.text),
                   birthHeadCircumference: double.tryParse(headController.text),
                 );
+                // 更新数据库
+                await DatabaseService.instance.updateBaby(updatedBaby);
                 setState(() => _baby = updatedBaby);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
