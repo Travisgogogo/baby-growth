@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     
     steps:
     - uses: actions/checkout@v4
@@ -26,20 +27,27 @@ jobs:
     
     - name: Build APK
       run: |
+        # Create Flutter project in /tmp to avoid git conflicts
         cd /tmp
-        rm -rf myapp
-        flutter create --platforms=android myapp
-        rm -rf myapp/lib
-        cp -r $GITHUB_WORKSPACE/lib myapp/
-        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
-        cd myapp
+        rm -rf baby_growth_build
+        flutter create --project-name=baby_growth --platforms=android baby_growth_build
+        
+        # Copy project files
+        cp -r $GITHUB_WORKSPACE/lib baby_growth_build/
+        cp $GITHUB_WORKSPACE/pubspec.yaml baby_growth_build/
+        
+        # Build APK
+        cd baby_growth_build
         flutter pub get
-        flutter build apk --release --verbose 2>&1 | tee build.log || true
-        cp /tmp/myapp/build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/app-release.apk
+        flutter build apk --release
+        
+        # Copy APK back to workspace
+        mkdir -p $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
+        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
-        path: app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
