@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/baby.dart';
 import '../models/illness_record.dart';
+import '../models/vaccine_record.dart';
 import '../services/database_service.dart';
 
 class HealthScreen extends StatefulWidget {
@@ -14,30 +15,33 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
   late TabController _tabController;
   Baby? _baby;
   List<IllnessRecord> _illnessRecords = [];
+  List<VaccineRecord> _vaccineRecords = [];
+  bool _isLoading = true;
   
-  final List<Vaccine> _vaccines = [
-    Vaccine('乙肝疫苗第1剂', '出生', true, DateTime(2025, 6, 10)),
-    Vaccine('卡介苗', '出生', true, DateTime(2025, 6, 10)),
-    Vaccine('乙肝疫苗第2剂', '1月龄', true, DateTime(2025, 7, 10)),
-    Vaccine('脊灰疫苗第1剂', '2月龄', true, DateTime(2025, 8, 10)),
-    Vaccine('脊灰疫苗第2剂', '3月龄', true, DateTime(2025, 9, 10)),
-    Vaccine('百白破疫苗第1剂', '3月龄', true, DateTime(2025, 9, 10)),
-    Vaccine('脊灰疫苗第3剂', '4月龄', true, DateTime(2025, 10, 10)),
-    Vaccine('百白破疫苗第2剂', '4月龄', true, DateTime(2025, 10, 10)),
-    Vaccine('百白破疫苗第3剂', '5月龄', true, DateTime(2025, 11, 10)),
-    Vaccine('乙肝疫苗第3剂', '6月龄', false, null),
-    Vaccine('A群流脑疫苗第1剂', '6月龄', false, null),
-    Vaccine('麻腮风疫苗第1剂', '8月龄', false, null),
-    Vaccine('乙脑减毒活疫苗第1剂', '8月龄', false, null),
-    Vaccine('A群流脑疫苗第2剂', '9月龄', false, null),
-    Vaccine('百白破疫苗第4剂', '18月龄', false, null),
-    Vaccine('麻腮风疫苗第2剂', '18月龄', false, null),
-    Vaccine('甲肝减毒活疫苗', '18月龄', false, null),
-    Vaccine('乙脑减毒活疫苗第2剂', '2岁', false, null),
-    Vaccine('A群C群流脑疫苗第1剂', '3岁', false, null),
-    Vaccine('脊灰疫苗第4剂', '4岁', false, null),
-    Vaccine('白破疫苗', '6岁', false, null),
-    Vaccine('A群C群流脑疫苗第2剂', '6岁', false, null),
+  // 默认疫苗清单
+  final List<Map<String, String>> _defaultVaccines = [
+    {'id': 'v1', 'name': '乙肝疫苗第1剂', 'time': '出生'},
+    {'id': 'v2', 'name': '卡介苗', 'time': '出生'},
+    {'id': 'v3', 'name': '乙肝疫苗第2剂', 'time': '1月龄'},
+    {'id': 'v4', 'name': '脊灰疫苗第1剂', 'time': '2月龄'},
+    {'id': 'v5', 'name': '脊灰疫苗第2剂', 'time': '3月龄'},
+    {'id': 'v6', 'name': '百白破疫苗第1剂', 'time': '3月龄'},
+    {'id': 'v7', 'name': '脊灰疫苗第3剂', 'time': '4月龄'},
+    {'id': 'v8', 'name': '百白破疫苗第2剂', 'time': '4月龄'},
+    {'id': 'v9', 'name': '百白破疫苗第3剂', 'time': '5月龄'},
+    {'id': 'v10', 'name': '乙肝疫苗第3剂', 'time': '6月龄'},
+    {'id': 'v11', 'name': 'A群流脑疫苗第1剂', 'time': '6月龄'},
+    {'id': 'v12', 'name': '麻腮风疫苗第1剂', 'time': '8月龄'},
+    {'id': 'v13', 'name': '乙脑减毒活疫苗第1剂', 'time': '8月龄'},
+    {'id': 'v14', 'name': 'A群流脑疫苗第2剂', 'time': '9月龄'},
+    {'id': 'v15', 'name': '百白破疫苗第4剂', 'time': '18月龄'},
+    {'id': 'v16', 'name': '麻腮风疫苗第2剂', 'time': '18月龄'},
+    {'id': 'v17', 'name': '甲肝减毒活疫苗', 'time': '18月龄'},
+    {'id': 'v18', 'name': '乙脑减毒活疫苗第2剂', 'time': '2岁'},
+    {'id': 'v19', 'name': 'A群C群流脑疫苗第1剂', 'time': '3岁'},
+    {'id': 'v20', 'name': '脊灰疫苗第4剂', 'time': '4岁'},
+    {'id': 'v21', 'name': '白破疫苗', 'time': '6岁'},
+    {'id': 'v22', 'name': 'A群C群流脑疫苗第2剂', 'time': '6岁'},
   ];
 
   @override
@@ -48,12 +52,42 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
   }
 
   Future<void> _loadData() async {
+    setState(() => _isLoading = true);
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
       setState(() => _baby = babies.first);
-      final records = await DatabaseService.instance.getIllnessRecords(babies.first.id!);
-      setState(() => _illnessRecords = records);
+      
+      // 加载疾病记录
+      final illnessRecords = await DatabaseService.instance.getIllnessRecords(babies.first.id!);
+      setState(() => _illnessRecords = illnessRecords);
+      
+      // 加载疫苗记录，如果没有则初始化
+      var vaccineRecords = await DatabaseService.instance.getVaccineRecords(babies.first.id!);
+      if (vaccineRecords.isEmpty) {
+        // 初始化默认疫苗
+        for (final v in _defaultVaccines) {
+          final record = VaccineRecord(
+            babyId: babies.first.id!,
+            vaccineId: v['id']!,
+            name: v['name']!,
+            scheduledTime: v['time']!,
+          );
+          await DatabaseService.instance.createVaccineRecord(record);
+        }
+        vaccineRecords = await DatabaseService.instance.getVaccineRecords(babies.first.id!);
+      }
+      setState(() => _vaccineRecords = vaccineRecords);
     }
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _markVaccineCompleted(VaccineRecord record) async {
+    final updated = record.copyWith(completed: true, completedDate: DateTime.now());
+    await DatabaseService.instance.updateVaccineRecord(updated);
+    await _loadData();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${record.name}已标记完成')),
+    );
   }
 
   Future<void> _markRecovered(IllnessRecord record) async {
@@ -81,40 +115,24 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
             children: [
               TextField(
                 controller: symptomController,
-                decoration: const InputDecoration(
-                  labelText: '症状',
-                  hintText: '如：发烧、感冒、腹泻',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: '症状', hintText: '如：发烧、感冒、腹泻', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: tempController,
-                decoration: const InputDecoration(
-                  labelText: '体温（可选）',
-                  hintText: '如：38.5',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: '体温（可选）', hintText: '如：38.5', border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                decoration: const InputDecoration(
-                  labelText: '详细描述',
-                  hintText: '症状表现、精神状态等',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: '详细描述', hintText: '症状表现、精神状态等', border: OutlineInputBorder()),
                 maxLines: 2,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: treatmentController,
-                decoration: const InputDecoration(
-                  labelText: '治疗措施',
-                  hintText: '用药、护理方法等',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: '治疗措施', hintText: '用药、护理方法等', border: OutlineInputBorder()),
               ),
             ],
           ),
@@ -128,9 +146,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   babyId: _baby!.id!,
                   startTime: DateTime.now(),
                   symptom: symptomController.text,
-                  temperature: tempController.text.isNotEmpty
-                      ? double.tryParse(tempController.text)
-                      : null,
+                  temperature: tempController.text.isNotEmpty ? double.tryParse(tempController.text) : null,
                   description: descController.text,
                   treatment: treatmentController.text,
                 );
@@ -151,8 +167,8 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final completedCount = _vaccines.where((v) => v.completed).length;
-    final totalCount = _vaccines.length;
+    final completedCount = _vaccineRecords.where((v) => v.completed).length;
+    final totalCount = _vaccineRecords.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -170,13 +186,15 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildVaccineTab(completedCount, totalCount),
-          _buildIllnessTab(),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildVaccineTab(completedCount, totalCount),
+                _buildIllnessTab(),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddIllnessDialog,
         backgroundColor: const Color(0xFF667eea),
@@ -211,7 +229,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('$completed/$total', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                        Text('已完成 ${(completed / total * 100).toStringAsFixed(0)}%', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+                        Text('已完成 ${total > 0 ? (completed / total * 100).toStringAsFixed(0) : 0}%', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -219,7 +237,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                     width: 80,
                     height: 80,
                     child: CircularProgressIndicator(
-                      value: completed / total,
+                      value: total > 0 ? completed / total : 0,
                       backgroundColor: Colors.white.withOpacity(0.3),
                       valueColor: const AlwaysStoppedAnimation(Colors.white),
                       strokeWidth: 8,
@@ -233,12 +251,12 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
         const SizedBox(height: 16),
         const Text('疫苗清单', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
-        ..._vaccines.map((v) => _buildVaccineItem(v)),
+        ..._vaccineRecords.map((v) => _buildVaccineItem(v)),
       ],
     );
   }
 
-  Widget _buildVaccineItem(Vaccine v) {
+  Widget _buildVaccineItem(VaccineRecord v) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -247,10 +265,10 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
           child: Icon(v.completed ? Icons.check_circle : Icons.circle_outlined, color: v.completed ? const Color(0xFF4ade80) : Colors.grey),
         ),
         title: Text(v.name, style: TextStyle(decoration: v.completed ? TextDecoration.lineThrough : null, color: v.completed ? Colors.grey : Colors.black)),
-        subtitle: Text('${v.time}接种'),
+        subtitle: Text('${v.scheduledTime}接种'),
         trailing: v.completed
             ? Text('${v.completedDate?.month}月${v.completedDate?.day}日', style: const TextStyle(fontSize: 12, color: Colors.grey))
-            : TextButton(onPressed: () => setState(() { v.completed = true; v.completedDate = DateTime.now(); }), child: const Text('标记完成')),
+            : TextButton(onPressed: () => _markVaccineCompleted(v), child: const Text('标记完成')),
       ),
     );
   }
@@ -293,10 +311,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                         color: record.isOngoing ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text(
-                        record.symptom,
-                        style: TextStyle(color: record.isOngoing ? Colors.red : Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
+                      child: Text(record.symptom, style: TextStyle(color: record.isOngoing ? Colors.red : Colors.green, fontSize: 12, fontWeight: FontWeight.w500)),
                     ),
                     if (record.temperature != null) ...[
                       const SizedBox(width: 8),
@@ -329,27 +344,9 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
               const SizedBox(width: 4),
               Text('持续: ${record.duration}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             ]),
-            const SizedBox(height: 4),
-            Row(children: [
-              const Icon(Icons.access_time, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text('开始: ${_formatTime(record.startTime)}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-            ]),
           ],
         ),
       ),
     );
   }
-
-  String _formatTime(DateTime time) {
-    return '${time.month}月${time.day}日 ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
-}
-
-class Vaccine {
-  String name;
-  String time;
-  bool completed;
-  DateTime? completedDate;
-  Vaccine(this.name, this.time, this.completed, this.completedDate);
 }
