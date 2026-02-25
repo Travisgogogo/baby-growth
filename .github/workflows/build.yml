@@ -34,9 +34,12 @@ jobs:
         cp -r $GITHUB_WORKSPACE/lib myapp/
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
         cd myapp
+        
+        # Fix Kotlin version
+        sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
+        
         flutter pub get
         flutter build apk --release --verbose 2>&1 | tee build.log
-        # Check if APK exists
         ls -la build/app/outputs/flutter-apk/
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
