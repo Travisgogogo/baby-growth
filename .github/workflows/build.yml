@@ -25,78 +25,13 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
-    - name: Prepare and Build APK
+    - name: Create Android Project
       run: |
-        # Remove problematic directories first
-        rm -rf lib/models lib/services lib/screens
-        
-        # Create simple main.dart using echo
-        echo "import 'package:flutter/material.dart';" > lib/main.dart
-        echo "" >> lib/main.dart
-        echo "void main() {" >> lib/main.dart
-        echo "  runApp(const MyApp());" >> lib/main.dart
-        echo "}" >> lib/main.dart
-        echo "" >> lib/main.dart
-        echo "class MyApp extends StatelessWidget {" >> lib/main.dart
-        echo "  const MyApp({super.key});" >> lib/main.dart
-        echo "" >> lib/main.dart
-        echo "  @override" >> lib/main.dart
-        echo "  Widget build(BuildContext context) {" >> lib/main.dart
-        echo "    return MaterialApp(" >> lib/main.dart
-        echo "      title: '宝宝成长记'," >> lib/main.dart
-        echo "      debugShowCheckedModeBanner: false," >> lib/main.dart
-        echo "      theme: ThemeData(" >> lib/main.dart
-        echo "        colorScheme: ColorScheme.fromSeed(" >> lib/main.dart
-        echo "          seedColor: const Color(0xFF667eea)," >> lib/main.dart
-        echo "          brightness: Brightness.light," >> lib/main.dart
-        echo "        )," >> lib/main.dart
-        echo "        useMaterial3: true," >> lib/main.dart
-        echo "      )," >> lib/main.dart
-        echo "      home: const HomePage()," >> lib/main.dart
-        echo "    );" >> lib/main.dart
-        echo "  }" >> lib/main.dart
-        echo "}" >> lib/main.dart
-        echo "" >> lib/main.dart
-        echo "class HomePage extends StatelessWidget {" >> lib/main.dart
-        echo "  const HomePage({super.key});" >> lib/main.dart
-        echo "" >> lib/main.dart
-        echo "  @override" >> lib/main.dart
-        echo "  Widget build(BuildContext context) {" >> lib/main.dart
-        echo "    return Scaffold(" >> lib/main.dart
-        echo "      appBar: AppBar(" >> lib/main.dart
-        echo "        title: const Text('宝宝成长记')," >> lib/main.dart
-        echo "        backgroundColor: Theme.of(context).colorScheme.inversePrimary," >> lib/main.dart
-        echo "      )," >> lib/main.dart
-        echo "      body: const Center(" >> lib/main.dart
-        echo "        child: Text('欢迎使用宝宝成长记 App')," >> lib/main.dart
-        echo "      )," >> lib/main.dart
-        echo "    );" >> lib/main.dart
-        echo "  }" >> lib/main.dart
-        echo "}" >> lib/main.dart
-        
-        # Create simple pubspec.yaml using echo
-        echo "name: baby_growth" > pubspec.yaml
-        echo "description: 宝宝成长记录" >> pubspec.yaml
-        echo "publish_to: 'none'" >> pubspec.yaml
-        echo "version: 1.0.0+1" >> pubspec.yaml
-        echo "" >> pubspec.yaml
-        echo "environment:" >> pubspec.yaml
-        echo "  sdk: '>=3.0.0 <4.0.0'" >> pubspec.yaml
-        echo "" >> pubspec.yaml
-        echo "dependencies:" >> pubspec.yaml
-        echo "  flutter:" >> pubspec.yaml
-        echo "    sdk: flutter" >> pubspec.yaml
-        echo "  cupertino_icons: ^1.0.2" >> pubspec.yaml
-        echo "" >> pubspec.yaml
-        echo "dev_dependencies:" >> pubspec.yaml
-        echo "  flutter_test:" >> pubspec.yaml
-        echo "    sdk: flutter" >> pubspec.yaml
-        echo "  flutter_lints: ^3.0.0" >> pubspec.yaml
-        echo "" >> pubspec.yaml
-        echo "flutter:" >> pubspec.yaml
-        echo "  uses-material-design: true" >> pubspec.yaml
-        
-        # Build
+        # Create Android platform files
+        flutter create --platforms=android .
+    
+    - name: Build APK
+      run: |
         flutter pub get
         flutter build apk --release
     
