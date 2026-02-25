@@ -26,27 +26,32 @@ jobs:
     
     - name: Build APK
       run: |
-        # Create Flutter project in temp directory
+        # Create Flutter project
         cd /tmp
         flutter create --platforms=android myapp
         
-        # Copy source files
+        # Copy lib
         rm -rf myapp/lib
         cp -r $GITHUB_WORKSPACE/lib myapp/
+        
+        # Copy pubspec.yaml
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
         
-        # Build APK
-        cd myapp
+        # Fix minSdkVersion for sqflite
+        cd myapp/android/app
+        sed -i 's/minSdkVersion .*/minSdkVersion 21/' build.gradle
+        cd /tmp/myapp
+        
+        # Build
         flutter pub get
         flutter build apk --release
         
-        # Copy APK back to workspace
-        mkdir -p $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
-        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build/app/outputs/flutter-apk/
+        # Move APK to workspace for upload
+        mv build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: app-release.apk
         retention-days: 30
