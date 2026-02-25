@@ -18,19 +18,20 @@ jobs:
         flutter-version: '3.19.0'
         channel: 'stable'
     
-    - name: Create Flutter project with Android support
+    - name: Create Android project
       run: |
-        # Create a new temp project with Android platform
+        # Create a new temp project with Android platform in /tmp
+        cd /tmp
         flutter create --platforms=android --project-name=baby_growth temp_project
         
         # Copy the generated android folder to our project
-        cp -r temp_project/android .
+        cp -r /tmp/temp_project/android ${{ github.workspace }}/
         
-        # Copy other platform files if needed
-        cp -r temp_project/.metadata .
+        # Copy metadata file
+        cp -r /tmp/temp_project/.metadata ${{ github.workspace }}/
         
         # Clean up
-        rm -rf temp_project
+        rm -rf /tmp/temp_project
     
     - name: Get dependencies
       run: flutter pub get
