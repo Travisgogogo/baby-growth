@@ -62,28 +62,31 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
         backgroundColor: const Color(0xFF667eea),
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
+              child: Row(
+                children: [
+                  Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
-                const SizedBox(width: 8),
-                Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
-                const SizedBox(width: 8),
-                Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
-              ],
-            ),
-          ),
-          const Expanded(child: Center(child: Text('生长曲线图表'))),
-        ],
+            const Expanded(child: Center(child: Text('生长曲线图表'))),
+          ],
+        ),
       ),
     );
   }
