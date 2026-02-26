@@ -295,9 +295,9 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
+                        Icon(
                           category.icon,
-                          style: const TextStyle(fontSize: 18),
+                          size: 18,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -385,9 +385,10 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                   child: Center(
-                    child: Text(
+                    child: Icon(
                       milestone.category.icon,
-                      style: const TextStyle(fontSize: 20),
+                      size: 20,
+                      color: milestone.category.color,
                     ),
                   ),
                 ),

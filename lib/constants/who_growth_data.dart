@@ -509,22 +509,18 @@ class GrowthAssessmentUtil {
       return '下降明显';
     }
   }
-}
 
-/// 生长评估工具类 - 兼容旧代码
-class GrowthAssessmentUtil {
-  GrowthAssessmentUtil._();
-  
-  /// 获取百分位等级字符串
+  /// 获取百分位等级字符串（兼容方法）
   static String getPercentileLevel(double value, WHOGrowthDataPoint data) {
     if (value < data.p3) return '<P3';
     if (value < data.p15) return 'P3-P15';
-    if (value.p50) return 'P50-P85';
+    if (value < data.p50) return 'P15-P50';
+    if (value < data.p85) return 'P50-P85';
     if (value < data.p97) return 'P85-P97';
     return '>P97';
   }
   
-  /// 获取状态颜色
+  /// 获取状态颜色（兼容方法）
   static Color getStatusColor(String percentileLevel) {
     if (percentileLevel.contains('<P3') || percentileLevel.contains('>P97')) {
       return Colors.orange;
