@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -210,15 +211,19 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('全部记录'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
+          indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white.withOpacity(0.7),
+          labelStyle: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(text: '喂养'),
             Tab(text: '生长'),
@@ -241,29 +246,58 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
 
   Widget _buildFeedTab() {
     if (_feedRecords.isEmpty) {
-      return const Center(child: Text('暂无喂养记录', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: FadeInAnimation(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.restaurant, size: 64, color: AppColors.textTertiary.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text('暂无喂养记录', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
+            ],
+          ),
+        ),
+      );
     }
     return ListView.builder(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       itemCount: _feedRecords.length,
       itemBuilder: (context, index) {
         final record = _feedRecords[index];
-        return Dismissible(
-          key: Key('feed_${record.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          onDismissed: (_) => _deleteFeedRecord(record.id!),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.restaurant)),
-            title: Text('${record.type} ${record.amount?.toInt()}ml'),
-            subtitle: Text(_formatTime(record.time)),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit, size: 18),
-              onPressed: () => _editFeedRecord(record),
+        return ListItemAnimation(
+          index: index,
+          child: AnimatedCard(
+            margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              child: Dismissible(
+                key: Key('feed_${record.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: AppColors.error,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (_) => _deleteFeedRecord(record.id!),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingMedium,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.breastMilk,
+                    child: const Icon(Icons.restaurant, color: Colors.white),
+                  ),
+                  title: Text('${record.type} ${record.amount?.toInt()}ml', style: AppTextStyles.body),
+                  subtitle: Text(_formatTime(record.time), style: AppTextStyles.caption),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                    onPressed: () => _editFeedRecord(record),
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -273,29 +307,61 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
 
   Widget _buildGrowthTab() {
     if (_growthRecords.isEmpty) {
-      return const Center(child: Text('暂无生长记录', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: FadeInAnimation(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.trending_up, size: 64, color: AppColors.textTertiary.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text('暂无生长记录', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
+            ],
+          ),
+        ),
+      );
     }
     return ListView.builder(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       itemCount: _growthRecords.length,
       itemBuilder: (context, index) {
         final record = _growthRecords[index];
-        return Dismissible(
-          key: Key('growth_${record.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          onDismissed: (_) => _deleteGrowthRecord(record.id!),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.trending_up)),
-            title: Text('${record.weight?.toStringAsFixed(1)}kg, ${record.height?.toStringAsFixed(0)}cm'),
-            subtitle: Text(_formatDate(record.date)),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit, size: 18),
-              onPressed: () => _editGrowthRecord(record),
+        return ListItemAnimation(
+          index: index,
+          child: AnimatedCard(
+            margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              child: Dismissible(
+                key: Key('growth_${record.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: AppColors.error,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (_) => _deleteGrowthRecord(record.id!),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingMedium,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.mint,
+                    child: const Icon(Icons.trending_up, color: Colors.white),
+                  ),
+                  title: Text(
+                    '${record.weight?.toStringAsFixed(1)}kg, ${record.height?.toStringAsFixed(0)}cm',
+                    style: AppTextStyles.body,
+                  ),
+                  subtitle: Text(_formatDate(record.date), style: AppTextStyles.caption),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                    onPressed: () => _editGrowthRecord(record),
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -305,29 +371,61 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
 
   Widget _buildSleepTab() {
     if (_sleepRecords.isEmpty) {
-      return const Center(child: Text('暂无睡眠记录', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: FadeInAnimation(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.bedtime, size: 64, color: AppColors.textTertiary.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text('暂无睡眠记录', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
+            ],
+          ),
+        ),
+      );
     }
     return ListView.builder(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       itemCount: _sleepRecords.length,
       itemBuilder: (context, index) {
         final record = _sleepRecords[index];
         final duration = record.endTime != null 
             ? record.endTime!.difference(record.startTime).inMinutes 
             : null;
-        return Dismissible(
-          key: Key('sleep_${record.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          onDismissed: (_) => _deleteSleepRecord(record.id!),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.bedtime)),
-            title: Text(duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中'),
-            subtitle: Text(_formatTime(record.startTime)),
+        return ListItemAnimation(
+          index: index,
+          child: AnimatedCard(
+            margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              child: Dismissible(
+                key: Key('sleep_${record.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: AppColors.error,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (_) => _deleteSleepRecord(record.id!),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingMedium,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.secondary,
+                    child: const Icon(Icons.bedtime, color: Colors.white),
+                  ),
+                  title: Text(
+                    duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中',
+                    style: AppTextStyles.body,
+                  ),
+                  subtitle: Text(_formatTime(record.startTime), style: AppTextStyles.caption),
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -336,26 +434,55 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
 
   Widget _buildDiaperTab() {
     if (_diaperRecords.isEmpty) {
-      return const Center(child: Text('暂无换尿布记录', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: FadeInAnimation(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.baby_changing_station, size: 64, color: AppColors.textTertiary.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text('暂无换尿布记录', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
+            ],
+          ),
+        ),
+      );
     }
     return ListView.builder(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       itemCount: _diaperRecords.length,
       itemBuilder: (context, index) {
         final record = _diaperRecords[index];
-        return Dismissible(
-          key: Key('diaper_${record.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          onDismissed: (_) => _deleteDiaperRecord(record.id!),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.baby_changing_station)),
-            title: Text(record.type),
-            subtitle: Text(_formatTime(record.time)),
+        return ListItemAnimation(
+          index: index,
+          child: AnimatedCard(
+            margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              child: Dismissible(
+                key: Key('diaper_${record.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: AppColors.error,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (_) => _deleteDiaperRecord(record.id!),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.paddingMedium,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.accent,
+                    child: const Icon(Icons.baby_changing_station, color: Colors.white),
+                  ),
+                  title: Text(record.type, style: AppTextStyles.body),
+                  subtitle: Text(_formatTime(record.time), style: AppTextStyles.caption),
+                ),
+              ),
+            ),
           ),
         );
       },
