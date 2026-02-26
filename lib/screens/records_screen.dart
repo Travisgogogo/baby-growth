@@ -212,7 +212,7 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
     return Scaffold(
       appBar: AppBar(
         title: const Text('全部记录'),
-        backgroundColor: const AppColors.primary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,

@@ -278,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的'),
-        backgroundColor: const AppColors.primary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: ListView(
@@ -372,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: const AppColors.primary),
+      leading: Icon(icon, color: AppColors.primary),
       title: Text(title),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,

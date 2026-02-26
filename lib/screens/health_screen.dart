@@ -161,7 +161,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
     return Scaffold(
       appBar: AppBar(
         title: const Text('健康管理'),
-        backgroundColor: const AppColors.primary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
@@ -185,7 +185,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddIllnessDialog,
-        backgroundColor: const AppColors.primary,
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
       ),
     );

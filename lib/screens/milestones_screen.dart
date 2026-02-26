@@ -111,7 +111,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('发育里程碑'),
-        backgroundColor: const AppColors.primary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: Column(
