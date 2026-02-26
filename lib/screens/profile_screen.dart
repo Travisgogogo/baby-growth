@@ -54,11 +54,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
       final backup = {
-        'version': '1.0',
+        'version': AppConstants.backupVersion,
         'timestamp': DateTime.now().toIso8601String(),
         'baby': _baby!.toMap(),
         'growthRecords': (await DatabaseService.instance.getGrowthRecords(babyId)).map((r) => r.toMap()).toList(),
-        'feedRecords': (await DatabaseService.instance.getFeedRecords(babyId, limit: 1000)).map((r) => r.toMap()).toList(),
+        'feedRecords': (await DatabaseService.instance.getFeedRecords(babyId, limit: AppConstants.maxQueryLimit)).map((r) => r.toMap()).toList(),
         'sleepRecords': (await DatabaseService.instance.getSleepRecords(babyId)).map((r) => r.toMap()).toList(),
         'diaperRecords': (await DatabaseService.instance.getDiaperRecords(babyId)).map((r) => r.toMap()).toList(),
         'milestoneRecords': (await DatabaseService.instance.getMilestoneRecords(babyId)).map((r) => r.toMap()).toList(),
@@ -178,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: birthDate,
-                      firstDate: DateTime(2000),
+                      firstDate: DateTime(AppConstants.minBirthYear),
                       lastDate: DateTime.now(),
                     );
                     if (picked != null) {

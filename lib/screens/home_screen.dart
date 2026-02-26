@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: birthDate,
-                      firstDate: DateTime(2000),
+                      firstDate: DateTime(AppConstants.minBirthYear),
                       lastDate: DateTime.now(),
                     );
                     if (picked != null) {

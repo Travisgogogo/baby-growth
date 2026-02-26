@@ -6,6 +6,7 @@ import '../models/feed_record.dart';
 import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
 import '../services/database_service.dart';
+import '../widgets/confirm_dialog.dart';
 
 class RecordsScreen extends StatefulWidget {
   const RecordsScreen({super.key});
@@ -59,72 +60,48 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
   }
 
   Future<void> _deleteFeedRecord(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条喂养记录吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.showDeleteConfirm(
+      context,
+      title: '确认删除',
+      content: '确定要删除这条喂养记录吗？',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await DatabaseService.instance.deleteFeedRecord(id);
       await _loadData();
     }
   }
 
   Future<void> _deleteGrowthRecord(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条生长记录吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.showDeleteConfirm(
+      context,
+      title: '确认删除',
+      content: '确定要删除这条生长记录吗？',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await DatabaseService.instance.deleteGrowthRecord(id);
       await _loadData();
     }
   }
 
   Future<void> _deleteSleepRecord(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条睡眠记录吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.showDeleteConfirm(
+      context,
+      title: '确认删除',
+      content: '确定要删除这条睡眠记录吗？',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await DatabaseService.instance.deleteSleepRecord(id);
       await _loadData();
     }
   }
 
   Future<void> _deleteDiaperRecord(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条换尿布记录吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.showDeleteConfirm(
+      context,
+      title: '确认删除',
+      content: '确定要删除这条换尿布记录吗？',
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await DatabaseService.instance.deleteDiaperRecord(id);
       await _loadData();
     }

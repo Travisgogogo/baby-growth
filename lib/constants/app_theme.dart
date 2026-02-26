@@ -66,3 +66,16 @@ class AppDimensions {
   static const double iconMedium = 24.0;
   static const double iconLarge = 32.0;
 }
+
+/// 应用业务常量
+class AppConstants {
+  // 日期选择器最早年份
+  static const int minBirthYear = 2000;
+  
+  // 数据库查询默认限制
+  static const int defaultQueryLimit = 10;
+  static const int maxQueryLimit = 1000;
+  
+  // 备份版本
+  static const String backupVersion = '1.0';
+}

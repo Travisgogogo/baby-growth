@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -320,7 +321,7 @@ class DatabaseService {
     }
   }
 
-  Future<List<FeedRecord>> getFeedRecords(int babyId, {int limit = 10}) async {
+  Future<List<FeedRecord>> getFeedRecords(int babyId, {int limit = AppConstants.defaultQueryLimit}) async {
     try {
       final db = await database;
       final maps = await db.query(
