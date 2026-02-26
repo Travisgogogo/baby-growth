@@ -66,9 +66,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_baby == null) {
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    if (_baby == null) {
+      return Scaffold(
+        body: _buildEmptyState(),
       );
     }
 
