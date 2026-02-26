@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../constants/vaccine_data.dart';
 import '../models/baby.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
@@ -18,32 +19,6 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
   List<IllnessRecord> _illnessRecords = [];
   List<VaccineRecord> _vaccineRecords = [];
   bool _isLoading = true;
-  
-  // 默认疫苗清单
-  final List<Map<String, String>> _defaultVaccines = [
-    {'id': 'v1', 'name': '乙肝疫苗第1剂', 'time': '出生'},
-    {'id': 'v2', 'name': '卡介苗', 'time': '出生'},
-    {'id': 'v3', 'name': '乙肝疫苗第2剂', 'time': '1月龄'},
-    {'id': 'v4', 'name': '脊灰疫苗第1剂', 'time': '2月龄'},
-    {'id': 'v5', 'name': '脊灰疫苗第2剂', 'time': '3月龄'},
-    {'id': 'v6', 'name': '百白破疫苗第1剂', 'time': '3月龄'},
-    {'id': 'v7', 'name': '脊灰疫苗第3剂', 'time': '4月龄'},
-    {'id': 'v8', 'name': '百白破疫苗第2剂', 'time': '4月龄'},
-    {'id': 'v9', 'name': '百白破疫苗第3剂', 'time': '5月龄'},
-    {'id': 'v10', 'name': '乙肝疫苗第3剂', 'time': '6月龄'},
-    {'id': 'v11', 'name': 'A群流脑疫苗第1剂', 'time': '6月龄'},
-    {'id': 'v12', 'name': '麻腮风疫苗第1剂', 'time': '8月龄'},
-    {'id': 'v13', 'name': '乙脑减毒活疫苗第1剂', 'time': '8月龄'},
-    {'id': 'v14', 'name': 'A群流脑疫苗第2剂', 'time': '9月龄'},
-    {'id': 'v15', 'name': '百白破疫苗第4剂', 'time': '18月龄'},
-    {'id': 'v16', 'name': '麻腮风疫苗第2剂', 'time': '18月龄'},
-    {'id': 'v17', 'name': '甲肝减毒活疫苗', 'time': '18月龄'},
-    {'id': 'v18', 'name': '乙脑减毒活疫苗第2剂', 'time': '2岁'},
-    {'id': 'v19', 'name': 'A群C群流脑疫苗第1剂', 'time': '3岁'},
-    {'id': 'v20', 'name': '脊灰疫苗第4剂', 'time': '4岁'},
-    {'id': 'v21', 'name': '白破疫苗', 'time': '6岁'},
-    {'id': 'v22', 'name': 'A群C群流脑疫苗第2剂', 'time': '6岁'},
-  ];
 
   @override
   void initState() {
@@ -75,12 +50,12 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
         var vaccineRecords = await DatabaseService.instance.getVaccineRecords(babyId);
         if (vaccineRecords.isEmpty) {
           // 初始化默认疫苗
-          for (final v in _defaultVaccines) {
+          for (final v in DefaultVaccines.vaccines) {
             final record = VaccineRecord(
               babyId: babyId,
-              vaccineId: v['id']!,
-              name: v['name']!,
-              scheduledTime: v['time']!,
+              vaccineId: v.id,
+              name: v.name,
+              scheduledTime: v.scheduledTime,
             );
             await DatabaseService.instance.createVaccineRecord(record);
           }

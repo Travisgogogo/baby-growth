@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../constants/milestone_data.dart';
 import '../models/baby.dart';
 import '../models/milestone_record.dart';
 import '../services/database_service.dart';
@@ -23,41 +24,17 @@ class MilestonesScreen extends StatefulWidget {
 
 class _MilestonesScreenState extends State<MilestonesScreen> {
   Baby? _baby;
-  final Map<String, List<Milestone>> _milestonesByMonth = {
-    '0-3个月': [
-      Milestone('m1', '追视移动物体', false, null),
-      Milestone('m2', '对声音有反应', false, null),
-      Milestone('m3', '俯卧抬头45度', false, null),
-      Milestone('m4', '发出咕咕声', false, null),
-    ],
-    '4-6个月': [
-      Milestone('m5', '翻身', false, null),
-      Milestone('m6', '独坐片刻', false, null),
-      Milestone('m7', '抓取玩具', false, null),
-      Milestone('m8', '笑出声', false, null),
-    ],
-    '7-9个月': [
-      Milestone('m9', '独坐稳定', false, null),
-      Milestone('m10', '双手传递物品', false, null),
-      Milestone('m11', '咿呀学语', false, null),
-      Milestone('m12', '爬行', false, null),
-      Milestone('m13', '理解"不"', false, null),
-    ],
-    '10-12个月': [
-      Milestone('m14', '扶站', false, null),
-      Milestone('m15', '挥手再见', false, null),
-      Milestone('m16', '叫爸爸妈妈', false, null),
-      Milestone('m17', '独站片刻', false, null),
-      Milestone('m18', '牵手走路', false, null),
-    ],
-    '1-2岁': [
-      Milestone('m19', '独走', false, null),
-      Milestone('m20', '用勺子吃饭', false, null),
-      Milestone('m21', '说10个词', false, null),
-      Milestone('m22', '指认身体部位', false, null),
-      Milestone('m23', '模仿动作', false, null),
-    ],
-  };
+  late final Map<String, List<Milestone>> _milestonesByMonth;
+
+  _MilestonesScreenState() {
+    // 从常量数据初始化里程碑
+    _milestonesByMonth = {};
+    DefaultMilestones.milestonesByMonth.forEach((month, defs) {
+      _milestonesByMonth[month] = defs
+          .map((def) => Milestone(def.id, def.title, false, null))
+          .toList();
+    });
+  }
 
   @override
   void initState() {
