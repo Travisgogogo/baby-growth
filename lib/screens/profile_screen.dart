@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../widgets/animations.dart';
 import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
@@ -276,25 +277,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('我的'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppDimensions.paddingMedium),
         children: [
-          _buildBabyCard(),
-          const SizedBox(height: 16),
-          _buildSectionTitle('数据管理'),
-          _buildMenuItem(Icons.backup, '数据备份', _backupData),
-          _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
-          _buildMenuItem(Icons.share, '分享成长', () {}),
-          const SizedBox(height: 16),
-          _buildSectionTitle('关于'),
-          _buildMenuItem(Icons.info, '关于我们', () {}),
+          FadeInAnimation(child: _buildBabyCard()),
+          const SizedBox(height: AppDimensions.paddingLarge),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 100),
+            child: _buildSectionTitle('数据管理'),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 150),
+            child: _buildMenuItem(Icons.backup, '数据备份', _backupData),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 200),
+            child: _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 250),
+            child: _buildMenuItem(Icons.share, '分享成长', () {}),
+          ),
+          const SizedBox(height: AppDimensions.paddingLarge),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 300),
+            child: _buildSectionTitle('关于'),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 350),
+            child: _buildMenuItem(Icons.info, '关于我们', () {}),
+          ),
           const SizedBox(height: 32),
           Center(
-            child: Text('宝宝成长记 v1.0.0', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+            child: Text('宝宝成长记 v1.0.0', style: AppTextStyles.caption),
           ),
           const SizedBox(height: 32),
         ],
@@ -304,78 +326,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildBabyCard() {
     if (_baby == null) {
-      return Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+      return AnimatedCard(
+        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Center(
+          child: Text('暂无宝宝信息', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
         ),
-        child: const Center(child: Text('暂无宝宝信息', style: TextStyle(color: Colors.white))),
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: _editBabyProfile,
-        borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              child: Text(_baby!.name[0], style: const TextStyle(fontSize: 32, color: Colors.white)),
+    return AnimatedCard(
+      margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+      onTap: _editBabyProfile,
+      child: Row(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(_baby!.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.edit, color: Colors.white70, size: 18),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('${_baby!.gender} · ${_baby!.ageDisplay}', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
-                ],
+            child: Center(
+              child: Text(
+                _baby!.name[0],
+                style: AppTextStyles.headline.copyWith(color: Colors.white),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppDimensions.paddingMedium),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(_baby!.name, style: AppTextStyles.title),
+                    const SizedBox(width: 8),
+                    Icon(Icons.edit, color: AppColors.textTertiary, size: 18),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_baby!.gender} · ${_baby!.ageDisplay}',
+                  style: AppTextStyles.subtitle,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingMedium,
+        vertical: AppDimensions.paddingSmall,
+      ),
+      child: Text(title, style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
     );
   }
 
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right),
+    return AnimatedCard(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingMedium,
+        vertical: 4,
+      ),
+      padding: EdgeInsets.zero,
       onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: AppDimensions.iconMedium),
+          ),
+          title: Text(title, style: AppTextStyles.body),
+          trailing: Icon(Icons.chevron_right, color: AppColors.textTertiary),
+        ),
+      ),
     );
   }
 }

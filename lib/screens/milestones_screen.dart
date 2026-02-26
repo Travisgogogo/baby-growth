@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
+import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/milestone_record.dart';
 import '../services/database_service.dart';
@@ -109,54 +110,71 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     });
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('发育里程碑'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('发育进度', style: TextStyle(color: Colors.white, fontSize: 14)),
-                      const SizedBox(height: 8),
-                      Text('$totalCompleted/$totalCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                    ],
+          FadeInAnimation(
+            child: Container(
+              margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+              padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                CircularProgressIndicator(
-                  value: totalCount > 0 ? totalCompleted / totalCount : 0,
-                  backgroundColor: Colors.white.withOpacity(0.3),
-                  valueColor: const AlwaysStoppedAnimation(Colors.white),
-                  strokeWidth: 8,
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('发育进度', style: AppTextStyles.subtitle.copyWith(color: Colors.white)),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$totalCompleted/$totalCount',
+                          style: AppTextStyles.headline.copyWith(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: CircularProgressIndicator(
+                      value: totalCount > 0 ? totalCompleted / totalCount : 0,
+                      backgroundColor: Colors.white.withOpacity(0.3),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                      strokeWidth: 8,
+                      strokeCap: StrokeCap.round,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
               itemCount: _milestonesByMonth.length,
               itemBuilder: (context, index) {
                 final month = _milestonesByMonth.keys.elementAt(index);
                 final milestones = _milestonesByMonth[month]!;
-                return _buildMonthSection(month, milestones);
+                return ListItemAnimation(
+                  index: index,
+                  child: _buildMonthSection(month, milestones),
+                );
               },
             ),
           ),
@@ -166,26 +184,51 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   }
 
   Widget _buildMonthSection(String month, List<Milestone> milestones) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        title: Text(month, style: const TextStyle(fontWeight: FontWeight.w600)),
-        children: milestones.map((m) => ListTile(
-          leading: Checkbox(
-            value: m.completed,
-            onChanged: (_) => _toggleMilestone(m),
-          ),
-          title: Text(m.title, style: TextStyle(
-            decoration: m.completed ? TextDecoration.lineThrough : null,
-            color: m.completed ? Colors.grey : Colors.black,
-          )),
-          subtitle: m.completedDate != null 
-              ? Text('${_formatDate(m.completedDate!)}')
-              : null,
-          trailing: m.completed 
-              ? const Icon(Icons.check_circle, color: Colors.green)
-              : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
-        )).toList(),
+    return AnimatedCard(
+      margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+          childrenPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+          title: Text(month, style: AppTextStyles.title),
+          iconColor: AppColors.primary,
+          collapsedIconColor: AppColors.textTertiary,
+          children: milestones.asMap().entries.map((entry) {
+            final m = entry.value;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: AnimatedContainer(
+                duration: AppAnimations.fast,
+                child: Checkbox(
+                  value: m.completed,
+                  onChanged: (_) => _toggleMilestone(m),
+                  activeColor: AppColors.success,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              title: Text(
+                m.title,
+                style: AppTextStyles.body.copyWith(
+                  decoration: m.completed ? TextDecoration.lineThrough : null,
+                  color: m.completed ? AppColors.textTertiary : AppColors.textPrimary,
+                ),
+              ),
+              subtitle: m.completedDate != null
+                  ? Text(_formatDate(m.completedDate!), style: AppTextStyles.caption)
+                  : null,
+              trailing: AnimatedSwitcher(
+                duration: AppAnimations.normal,
+                child: m.completed
+                    ? Icon(Icons.check_circle, color: AppColors.success, key: ValueKey('completed_${m.id}'))
+                    : Icon(Icons.radio_button_unchecked, color: AppColors.textTertiary, key: ValueKey('pending_${m.id}')),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
