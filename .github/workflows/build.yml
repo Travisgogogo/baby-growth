@@ -47,8 +47,9 @@ jobs:
         # Fix Kotlin version to 1.9.0 to match dependencies
         sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
         
-        # Fix minSdkVersion
+        # Fix minSdkVersion - handle both "minSdkVersion 21" and "minSdk = 21" formats
         sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
+        sed -i 's/minSdk = .*/minSdk = 24/' android/app/build.gradle
         
         # Fix compileSdkVersion to 35 for record plugin compatibility
         sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle
@@ -56,6 +57,10 @@ jobs:
         
         # Also fix flutter.compileSdkVersion if present
         sed -i 's/flutter.compileSdkVersion/35/' android/app/build.gradle
+        
+        # Show the build.gradle for debugging
+        echo "=== android/app/build.gradle ==="
+        cat android/app/build.gradle
         
         flutter pub get
         
