@@ -50,6 +50,9 @@ jobs:
         # Also fix flutter.compileSdkVersion if present
         sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
         
+        # Fix compileSdkVersion for plugins (record_android etc.)
+        find ~/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' {} \; 2>/dev/null || true
+        
         flutter pub get
         flutter build apk --release
         
