@@ -10,6 +10,8 @@ import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
+import '../services/nlp_parser.dart';
+import '../widgets/voice_record_button.dart';
 import 'growth_chart_screen.dart';
 import 'growth_chart_detail_screen.dart';
 import 'records_screen.dart';
@@ -400,10 +402,86 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: actions.map((action) => _buildActionButton(action)).toList(),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: actions.map((action) => _buildActionButton(action)).toList(),
+          ),
+          const SizedBox(height: 12),
+          // 语音记录按钮
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              VoiceRecordButton(
+                onResult: (record) {
+                  if (record != null) {
+                    _handleVoiceRecord(record);
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '按住说话',
+                style: AppTextStyles.caption,
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  void _handleVoiceRecord(ParsedRecord record) async {
+    if (_baby?.id == null) return;
+    
+    final babyId = _baby!.id!;
+    
+    switch (record.type) {
+      case 'feed':
+        final feedRecord = FeedRecord(
+          babyId: babyId,
+          time: record.data['time'] ?? DateTime.now(),
+          type: record.data['type'] ?? '母乳',
+          amount: record.data['amount'],
+        );
+        await DatabaseService.instance.createFeedRecord(feedRecord);
+        break;
+        
+      case 'sleep':
+        final sleepRecord = SleepRecord(
+          babyId: babyId,
+          startTime: record.data['startTime'] ?? DateTime.now(),
+          endTime: record.data['endTime'],
+        );
+        await DatabaseService.instance.createSleepRecord(sleepRecord);
+        break;
+        
+      case 'diaper':
+        final diaperRecord = DiaperRecord(
+          babyId: babyId,
+          time: record.data['time'] ?? DateTime.now(),
+          type: record.data['type'] ?? '尿',
+        );
+        await DatabaseService.instance.createDiaperRecord(diaperRecord);
+        break;
+        
+      case 'growth':
+        final growthRecord = GrowthRecord(
+          babyId: babyId,
+          date: record.data['date'] ?? DateTime.now(),
+          weight: record.data['weight'],
+          height: record.data['height'],
+        );
+        await DatabaseService.instance.createGrowthRecord(growthRecord);
+        break;
+    }
+    
+    // 刷新数据
+    await _loadData();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('记录已保存')),
     );
   }
 
