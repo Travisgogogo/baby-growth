@@ -66,12 +66,14 @@ class AnimatedCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
 
   const AnimatedCard({
     super.key,
     required this.child,
     this.onTap,
     this.padding,
+    this.margin,
   });
 
   @override
@@ -93,6 +95,7 @@ class _AnimatedCardState extends State<AnimatedCard> {
         duration: AppAnimations.fast,
         child: AnimatedContainer(
           duration: AppAnimations.normal,
+          margin: widget.margin,
           padding: widget.padding ?? const EdgeInsets.all(AppDimensions.paddingMedium),
           decoration: BoxDecoration(
             color: AppColors.surface,
