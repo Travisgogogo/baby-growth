@@ -261,38 +261,6 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
       ),
     );
   }
-                              ],
-                            ),
-                    ),
-                  ),
-                  
-                  // 数据列表
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('历史记录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 12),
-                        ..._records.take(5).map((record) => ListTile(
-                          dense: true,
-                          title: Text('${_formatDate(record.date)}'),
-                          subtitle: Text('体重: ${record.weight?.toStringAsFixed(1) ?? "--"}kg, 身高: ${record.height?.toStringAsFixed(0) ?? "--"}cm'),
-                        )),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
 
   Widget _buildMetricButton(String metric, String label, String value) {
     final isSelected = _selectedMetric == metric;
@@ -301,14 +269,14 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : const Color(0xFFF8F9FF),
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? AppColors.primary : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         ),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.primary)),
+            Text(value, style: AppTextStyles.subtitle.copyWith(color: isSelected ? Colors.white : AppColors.primary)),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey)),
+            Text(label, style: AppTextStyles.caption.copyWith(color: isSelected ? Colors.white.withOpacity(0.9) : AppColors.textTertiary)),
           ],
         ),
       ),
