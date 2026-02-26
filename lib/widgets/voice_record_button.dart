@@ -80,7 +80,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
       setState(() => _isProcessing = false);
 
-      if (text.isEmpty) {
+      if (text == null || text.isEmpty) {
         _showError('识别失败，请重试');
         return;
       }
