@@ -44,8 +44,11 @@ jobs:
         sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
         
         # Fix compileSdkVersion to 34 (avoid SDK 35 issues)
-        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
-        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
+        sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle
+        sed -i 's/targetSdk .*/targetSdk 34/' android/app/build.gradle
+        
+        # Also fix flutter.compileSdkVersion if present
+        sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
         
         flutter pub get
         flutter build apk --release
