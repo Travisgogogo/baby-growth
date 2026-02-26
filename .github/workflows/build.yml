@@ -37,8 +37,8 @@ jobs:
         
         cd myapp
         
-        # Fix Kotlin version
-        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
+        # Fix Kotlin version to 1.9.0 to match dependencies
+        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
         
         # Fix minSdkVersion
         sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
