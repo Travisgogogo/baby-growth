@@ -37,20 +37,23 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
   Future<void> _loadData() async {
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      final babyId = babies.first.id!;
-      setState(() => _baby = babies.first);
-      
-      final feeds = await DatabaseService.instance.getFeedRecords(babyId);
-      final growth = await DatabaseService.instance.getGrowthRecords(babyId);
-      final sleep = await DatabaseService.instance.getSleepRecords(babyId);
-      final diapers = await DatabaseService.instance.getDiaperRecords(babyId);
-      
-      setState(() {
-        _feedRecords = feeds;
-        _growthRecords = growth;
-        _sleepRecords = sleep;
-        _diaperRecords = diapers;
-      });
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() => _baby = baby);
+        
+        final feeds = await DatabaseService.instance.getFeedRecords(babyId);
+        final growth = await DatabaseService.instance.getGrowthRecords(babyId);
+        final sleep = await DatabaseService.instance.getSleepRecords(babyId);
+        final diapers = await DatabaseService.instance.getDiaperRecords(babyId);
+        
+        setState(() {
+          _feedRecords = feeds;
+          _growthRecords = growth;
+          _sleepRecords = sleep;
+          _diaperRecords = diapers;
+        });
+      }
     }
   }
 

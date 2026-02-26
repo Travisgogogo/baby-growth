@@ -55,28 +55,32 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
     setState(() => _isLoading = true);
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      setState(() => _baby = babies.first);
-      
-      // 加载疾病记录
-      final illnessRecords = await DatabaseService.instance.getIllnessRecords(babies.first.id!);
-      setState(() => _illnessRecords = illnessRecords);
-      
-      // 加载疫苗记录，如果没有则初始化
-      var vaccineRecords = await DatabaseService.instance.getVaccineRecords(babies.first.id!);
-      if (vaccineRecords.isEmpty) {
-        // 初始化默认疫苗
-        for (final v in _defaultVaccines) {
-          final record = VaccineRecord(
-            babyId: babies.first.id!,
-            vaccineId: v['id']!,
-            name: v['name']!,
-            scheduledTime: v['time']!,
-          );
-          await DatabaseService.instance.createVaccineRecord(record);
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() => _baby = baby);
+        
+        // 加载疾病记录
+        final illnessRecords = await DatabaseService.instance.getIllnessRecords(babyId);
+        setState(() => _illnessRecords = illnessRecords);
+        
+        // 加载疫苗记录，如果没有则初始化
+        var vaccineRecords = await DatabaseService.instance.getVaccineRecords(babyId);
+        if (vaccineRecords.isEmpty) {
+          // 初始化默认疫苗
+          for (final v in _defaultVaccines) {
+            final record = VaccineRecord(
+              babyId: babyId,
+              vaccineId: v['id']!,
+              name: v['name']!,
+              scheduledTime: v['time']!,
+            );
+            await DatabaseService.instance.createVaccineRecord(record);
+          }
+          vaccineRecords = await DatabaseService.instance.getVaccineRecords(babyId);
         }
-        vaccineRecords = await DatabaseService.instance.getVaccineRecords(babies.first.id!);
+        setState(() => _vaccineRecords = vaccineRecords);
       }
-      setState(() => _vaccineRecords = vaccineRecords);
     }
     setState(() => _isLoading = false);
   }

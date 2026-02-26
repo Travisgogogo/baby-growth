@@ -28,9 +28,13 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     setState(() => _isLoading = true);
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      setState(() => _baby = babies.first);
-      final records = await DatabaseService.instance.getGrowthRecords(babies.first.id!);
-      setState(() => _records = records);
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() => _baby = baby);
+        final records = await DatabaseService.instance.getGrowthRecords(babyId);
+        setState(() => _records = records);
+      }
     }
     setState(() => _isLoading = false);
   }

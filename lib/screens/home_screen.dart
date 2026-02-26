@@ -37,10 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      setState(() {
-        _baby = babies.first;
-      });
-      await _loadBabyData(babies.first.id!);
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() {
+          _baby = baby;
+        });
+        await _loadBabyData(babyId);
+      }
     }
     setState(() => _isLoading = false);
   }

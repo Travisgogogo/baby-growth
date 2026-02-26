@@ -67,9 +67,13 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   Future<void> _loadData() async {
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
-      setState(() => _baby = babies.first);
-      final records = await DatabaseService.instance.getMilestoneRecords(babies.first.id!);
-      _updateMilestonesFromRecords(records);
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() => _baby = baby);
+        final records = await DatabaseService.instance.getMilestoneRecords(babyId);
+        _updateMilestonesFromRecords(records);
+      }
     }
   }
 
@@ -91,10 +95,13 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   Future<void> _toggleMilestone(Milestone milestone) async {
     if (_baby == null) return;
     
+    final babyId = _baby!.id;
+    if (babyId == null) return;
+    
     if (!milestone.completed) {
       // 标记完成
       final record = MilestoneRecord(
-        babyId: _baby!.id!,
+        babyId: babyId,
         milestoneId: milestone.id,
         completedDate: DateTime.now(),
       );
@@ -105,7 +112,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
       });
     } else {
       // 取消完成
-      await DatabaseService.instance.deleteMilestoneRecord(_baby!.id!, milestone.id);
+      await DatabaseService.instance.deleteMilestoneRecord(babyId, milestone.id);
       setState(() {
         milestone.completed = false;
         milestone.completedDate = null;
