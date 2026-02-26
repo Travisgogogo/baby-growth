@@ -44,8 +44,8 @@ jobs:
         
         cd myapp
         
-        # Fix Kotlin version to 1.8.22 to match AndroidX dependencies
-        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.8.22"/' android/settings.gradle
+        # Fix Kotlin version to 1.9.0 to match AndroidX dependencies (1.8.22 too old for sealed classes)
+        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
         
         # Fix minSdkVersion - handle both "minSdkVersion 21" and "minSdk = 21" formats
         sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
@@ -71,8 +71,8 @@ jobs:
           sed -i 's/flutter\.compileSdkVersion/34/g' "$RECORD_PLUGIN_PATH"
           # Also fix ndkVersion if present
           sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$RECORD_PLUGIN_PATH"
-          # Fix Kotlin version in plugin to match project
-          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.8.22'/" "$RECORD_PLUGIN_PATH"
+          # Fix Kotlin version in plugin to match project (1.9.0 required for sealed classes support)
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" "$RECORD_PLUGIN_PATH"
           cat "$RECORD_PLUGIN_PATH"
         fi
         
