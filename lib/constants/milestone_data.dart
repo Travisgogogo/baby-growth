@@ -355,6 +355,9 @@ class MilestoneData {
     return allMilestones.where((m) => m.isInRange(month)).toList();
   }
 
+  /// 获取各分类的里程碑数量（兼容旧代码）
+  static Map<MilestoneCategory, int> get countByCategory => categoryCounts;
+
   /// 获取各分类的里程碑数量
   static Map<MilestoneCategory, int> get categoryCounts {
     final Map<MilestoneCategory, int> counts = {};
@@ -362,6 +365,25 @@ class MilestoneData {
       counts[category] = getByCategory(category).length;
     }
     return counts;
+  }
+
+  /// 根据ID获取里程碑
+  static Milestone? getMilestoneById(String id) {
+    try {
+      return allMilestones.firstWhere((m) => m.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 获取指定月龄的里程碑
+  static List<Milestone> getMilestonesForAge(int month) {
+    return getByCurrentMonth(month);
+  }
+
+  /// 获取发育预警信号
+  static List<String> getDevelopmentWarnings(int month) {
+    return getWarningSigns(month);
   }
 
   /// 获取里程碑总数

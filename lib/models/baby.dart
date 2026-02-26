@@ -45,6 +45,15 @@ class Baby {
      return DateTime.now().difference(birthDate).inDays;
    }
 
+   int get ageInMonths {
+     final now = DateTime.now();
+     int months = (now.year - birthDate.year) * 12 + now.month - birthDate.month;
+     if (now.day < birthDate.day) {
+       months--;
+     }
+     return months;
+   }
+
    String get ageDisplay {
      final days = ageInDays;
      if (days < 30) return '$days天';

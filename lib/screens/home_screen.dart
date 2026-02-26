@@ -464,10 +464,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return AnimatedCard(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const GrowthChartDetailScreen()),
-      ),
+      onTap: () {
+        if (_baby != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => GrowthChartDetailScreen(baby: _baby!)),
+          );
+        }
+      },
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -21,16 +21,29 @@ extension MilestoneCategoryExtension on MilestoneCategory {
     }
   }
 
-  String get iconName {
+  IconData get icon {
     switch (this) {
       case MilestoneCategory.grossMotor:
-        return 'directions_run';
+        return Icons.directions_run;
       case MilestoneCategory.fineMotor:
-        return 'back_hand';
+        return Icons.back_hand;
       case MilestoneCategory.language:
-        return 'record_voice_over';
+        return Icons.record_voice_over;
       case MilestoneCategory.socialEmotion:
-        return 'mood';
+        return Icons.mood;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case MilestoneCategory.grossMotor:
+        return Colors.blue;
+      case MilestoneCategory.fineMotor:
+        return Colors.green;
+      case MilestoneCategory.language:
+        return Colors.orange;
+      case MilestoneCategory.socialEmotion:
+        return Colors.purple;
     }
   }
 
@@ -175,12 +188,14 @@ class MilestoneStats {
   final int completedCount;
   final int inProgressCount;
   final int pendingCount;
+  final Map<MilestoneCategory, int> completedByCategory;
 
   const MilestoneStats({
     required this.totalCount,
     required this.completedCount,
     required this.inProgressCount,
     required this.pendingCount,
+    this.completedByCategory = const {},
   });
 
   /// 完成百分比
@@ -192,6 +207,28 @@ class MilestoneStats {
   /// 完成百分比（整数）
   int get completionPercentage {
     return (completionRate * 100).round();
+  }
+
+  /// 计算统计信息
+  static MilestoneStats calculate(List<MilestoneRecord> records) {
+    final completed = records.where((r) => r.completedDate != null).toList();
+    final completedByCategory = <MilestoneCategory, int>{};
+    
+    for (final record in completed) {
+      final milestone = MilestoneData.getMilestoneById(record.milestoneId);
+      if (milestone != null) {
+        completedByCategory[milestone.category] = 
+            (completedByCategory[milestone.category] ?? 0) + 1;
+      }
+    }
+    
+    return MilestoneStats(
+      totalCount: MilestoneData.allMilestones.length,
+      completedCount: completed.length,
+      inProgressCount: 0, // 简化处理
+      pendingCount: MilestoneData.allMilestones.length - completed.length,
+      completedByCategory: completedByCategory,
+    );
   }
 
   @override
