@@ -41,19 +41,39 @@ jobs:
         sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
         
         # Fix minSdkVersion
-        sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
+        sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
         
-        # Fix compileSdkVersion to 34 (avoid SDK 35 issues)
-        sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle
-        sed -i 's/targetSdk .*/targetSdk 34/' android/app/build.gradle
+        # Fix compileSdkVersion to 35 for record plugin compatibility
+        sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle
+        sed -i 's/targetSdk .*/targetSdk 35/' android/app/build.gradle
         
         # Also fix flutter.compileSdkVersion if present
-        sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
-        
-        # Fix compileSdkVersion for plugins (record_android etc.)
-        find ~/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' {} \; 2>/dev/null || true
+        sed -i 's/flutter.compileSdkVersion/35/' android/app/build.gradle
         
         flutter pub get
+        
+        # Fix record_android plugin build.gradle - replace flutter.compileSdkVersion with hardcoded value
+        RECORD_PLUGIN_PATH="$HOME/.pub-cache/hosted/pub.dev/record_android-1.5.1/android/build.gradle"
+        if [ -f "$RECORD_PLUGIN_PATH" ]; then
+          echo "Fixing record_android plugin build.gradle..."
+          sed -i 's/flutter\.compileSdkVersion/35/g' "$RECORD_PLUGIN_PATH"
+          # Also fix ndkVersion if present
+          sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$RECORD_PLUGIN_PATH"
+          cat "$RECORD_PLUGIN_PATH"
+        fi
+        
+        # Fix other plugins that might have similar issues
+        find $HOME/.pub-cache/hosted/pub.dev -name "build.gradle" -path "*/android/build.gradle" 2>/dev/null | while read f; do
+          if grep -q "flutter.compileSdkVersion" "$f" 2>/dev/null; then
+            echo "Fixing: $f"
+            sed -i 's/flutter\.compileSdkVersion/35/g' "$f"
+          fi
+          if grep -q "flutter.ndkVersion" "$f" 2>/dev/null; then
+            echo "Fixing ndk: $f"
+            sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$f"
+          fi
+        done
+        
         flutter build apk --release
         
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
@@ -90,19 +110,17 @@ jobs:
         
         cd myapp
         
+        # Configure iOS for simulator build (no code signing required)
         flutter pub get
-        flutter build ios --release --no-codesign
+        flutter build ios --simulator
         
-        # Create ipa
-        mkdir -p Payload
-        cp -r build/ios/iphoneos/Runner.app Payload/
-        zip -r Runner.ipa Payload
-        
-        cp Runner.ipa $GITHUB_WORKSPACE/
+        # Note: Device builds require Apple Developer account and code signing
+        # For now, we only build for simulator
+        echo "iOS simulator build completed successfully"
     
     - name: Upload iOS
       uses: actions/upload-artifact@v4
       with:
-        name: baby-growth-ios
-        path: Runner.ipa
+        name: baby-growth-ios-simulator
+        path: myapp/build/ios/iphonesimulator/Runner.app
         retention-days: 30
