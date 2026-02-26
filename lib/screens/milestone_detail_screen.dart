@@ -209,17 +209,45 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
     }
   }
 
+  Color _getCategoryColor(MilestoneCategory category) {
+    switch (category) {
+      case MilestoneCategory.grossMotor:
+        return const Color(0xFFFF8A80);  // 珊瑚粉
+      case MilestoneCategory.fineMotor:
+        return const Color(0xFF81D4FA);  // 天蓝
+      case MilestoneCategory.language:
+        return const Color(0xFFFFF59D);  // 暖黄
+      case MilestoneCategory.socialEmotion:
+        return const Color(0xFF80CBC4);  // 薄荷绿
+    }
+  }
+
+  IconData _getCategoryIcon(MilestoneCategory category) {
+    switch (category) {
+      case MilestoneCategory.grossMotor:
+        return Icons.directions_run;
+      case MilestoneCategory.fineMotor:
+        return Icons.back_hand;
+      case MilestoneCategory.language:
+        return Icons.record_voice_over;
+      case MilestoneCategory.socialEmotion:
+        return Icons.mood;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final categoryColor = _getCategoryColor(widget.milestone.category);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(),
+          _buildSliverAppBar(categoryColor),
           SliverToBoxAdapter(
             child: Column(
               children: [
-                _buildMilestoneInfo(),
+                _buildMilestoneInfo(categoryColor),
                 _buildCompletionSection(),
                 if (_isCompleted) ...[
                   _buildDateSection(),
@@ -236,7 +264,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
     );
   }
 
-  Widget _buildSliverAppBar() {
+  Widget _buildSliverAppBar(Color categoryColor) {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
@@ -245,8 +273,8 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _getCategoryColor(widget.milestone.category),
-                _getCategoryColor(widget.milestone.category).withOpacity(0.7),
+                categoryColor,
+                categoryColor.withOpacity(0.7),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -279,11 +307,11 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
           ),
         ),
       ),
-      backgroundColor: _getCategoryColor(widget.milestone.category),
+      backgroundColor: categoryColor,
     );
   }
 
-  Widget _buildMilestoneInfo() {
+  Widget _buildMilestoneInfo(Color categoryColor) {
     return FadeInAnimation(
       child: AnimatedCard(
         margin: const EdgeInsets.all(AppDimensions.paddingMedium),
@@ -298,13 +326,13 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(widget.milestone.category).withOpacity(0.2),
+                    color: categoryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     widget.milestone.category.displayName,
                     style: TextStyle(
-                      color: _getCategoryColor(widget.milestone.category),
+                      color: categoryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -341,7 +369,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              '训练建议',
+              '引导建议',
               style: AppTextStyles.subtitle,
             ),
             const SizedBox(height: 8),
@@ -689,31 +717,5 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getCategoryIcon(MilestoneCategory category) {
-    switch (category) {
-      case MilestoneCategory.grossMotor:
-        return Icons.directions_run;
-      case MilestoneCategory.fineMotor:
-        return Icons.back_hand;
-      case MilestoneCategory.language:
-        return Icons.record_voice_over;
-      case MilestoneCategory.socialEmotion:
-        return Icons.mood;
-    }
-  }
-
-  Color _getCategoryColor(MilestoneCategory category) {
-    switch (category) {
-      case MilestoneCategory.grossMotor:
-        return Colors.blue;
-      case MilestoneCategory.fineMotor:
-        return Colors.green;
-      case MilestoneCategory.language:
-        return Colors.orange;
-      case MilestoneCategory.socialEmotion:
-        return Colors.purple;
-    }
   }
 }
