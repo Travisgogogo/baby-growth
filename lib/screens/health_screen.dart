@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 import '../constants/vaccine_data.dart';
+import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
@@ -159,15 +160,19 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
     final totalCount = _vaccineRecords.length;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('健康管理'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
+          indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white.withOpacity(0.7),
+          labelStyle: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(text: '疫苗接种'),
             Tab(text: '疾病记录'),
@@ -175,7 +180,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : TabBarView(
               controller: _tabController,
               children: [
@@ -186,6 +191,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddIllnessDialog,
         backgroundColor: AppColors.primary,
+        elevation: 4,
         child: const Icon(Icons.add),
       ),
     );
@@ -193,147 +199,220 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
 
   Widget _buildVaccineTab(int completed, int total) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        FadeInAnimation(
+          child: Container(
+            padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('疫苗接种进度', style: TextStyle(color: Colors.white, fontSize: 16)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('$completed/$total', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                        Text('已完成 ${total > 0 ? (completed / total * 100).toStringAsFixed(0) : 0}%', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
-                      ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('疫苗接种进度', style: AppTextStyles.subtitle.copyWith(color: Colors.white)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$completed/$total',
+                            style: AppTextStyles.headline.copyWith(color: Colors.white),
+                          ),
+                          Text(
+                            '已完成 ${total > 0 ? (completed / total * 100).toStringAsFixed(0) : 0}%',
+                            style: AppTextStyles.caption.copyWith(color: Colors.white.withOpacity(0.9)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CircularProgressIndicator(
-                      value: total > 0 ? completed / total : 0,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
-                      strokeWidth: 8,
+                    SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: CircularProgressIndicator(
+                        value: total > 0 ? completed / total : 0,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        valueColor: const AlwaysStoppedAnimation(Colors.white),
+                        strokeWidth: 8,
+                        strokeCap: StrokeCap.round,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        const Text('疫苗清单', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
-        ..._vaccineRecords.map((v) => _buildVaccineItem(v)),
+        const SizedBox(height: AppDimensions.paddingLarge),
+        FadeInAnimation(
+          delay: const Duration(milliseconds: 100),
+          child: Text('疫苗清单', style: AppTextStyles.title),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        ..._vaccineRecords.asMap().entries.map((entry) => ListItemAnimation(
+          index: entry.key,
+          child: _buildVaccineItem(entry.value),
+        )),
       ],
     );
   }
 
   Widget _buildVaccineItem(VaccineRecord v) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: v.completed ? const Color(0xFF4ade80).withOpacity(0.1) : const Color(0xFFF5F5F7),
-          child: Icon(v.completed ? Icons.check_circle : Icons.circle_outlined, color: v.completed ? const Color(0xFF4ade80) : Colors.grey),
+    return AnimatedCard(
+      margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium, vertical: 4),
+          leading: AnimatedContainer(
+            duration: AppAnimations.normal,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: v.completed ? AppColors.success.withOpacity(0.1) : AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            ),
+            child: Icon(
+              v.completed ? Icons.check_circle : Icons.circle_outlined,
+              color: v.completed ? AppColors.success : AppColors.textTertiary,
+            ),
+          ),
+          title: Text(
+            v.name,
+            style: AppTextStyles.body.copyWith(
+              decoration: v.completed ? TextDecoration.lineThrough : null,
+              color: v.completed ? AppColors.textTertiary : AppColors.textPrimary,
+            ),
+          ),
+          subtitle: Text(v.scheduledTime, style: AppTextStyles.caption),
+          trailing: v.completed
+              ? Text(
+                  '${v.completedDate?.month}月${v.completedDate?.day}日',
+                  style: AppTextStyles.caption,
+                )
+              : TextButton(
+                  onPressed: () => _markVaccineCompleted(v),
+                  child: const Text('标记完成'),
+                ),
         ),
-        title: Text(v.name, style: TextStyle(decoration: v.completed ? TextDecoration.lineThrough : null, color: v.completed ? Colors.grey : Colors.black)),
-        subtitle: Text('${v.scheduledTime}接种'),
-        trailing: v.completed
-            ? Text('${v.completedDate?.month}月${v.completedDate?.day}日', style: const TextStyle(fontSize: 12, color: Colors.grey))
-            : TextButton(onPressed: () => _markVaccineCompleted(v), child: const Text('标记完成')),
       ),
     );
   }
 
   Widget _buildIllnessTab() {
     if (_illnessRecords.isEmpty) {
-      return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.healing, size: 64, color: Colors.grey),
-        SizedBox(height: 16),
-        Text('暂无疾病记录', style: TextStyle(color: Colors.grey)),
-      ]));
+      return Center(
+        child: FadeInAnimation(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.healing, size: 64, color: AppColors.textTertiary.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text('暂无疾病记录', style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary)),
+            ],
+          ),
+        ),
+      );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       itemCount: _illnessRecords.length,
       itemBuilder: (context, index) {
         final record = _illnessRecords[index];
-        return _buildIllnessCard(record);
+        return ListItemAnimation(
+          index: index,
+          child: _buildIllnessCard(record),
+        );
       },
     );
   }
 
   Widget _buildIllnessCard(IllnessRecord record) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: record.isOngoing ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(record.symptom, style: TextStyle(color: record.isOngoing ? Colors.red : Colors.green, fontSize: 12, fontWeight: FontWeight.w500)),
+    return AnimatedCard(
+      margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: record.isOngoing ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                     ),
-                    if (record.temperature != null) ...[
-                      const SizedBox(width: 8),
-                      Text('${record.temperature}°C', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                    ],
+                    child: Text(
+                      record.symptom,
+                      style: AppTextStyles.caption.copyWith(
+                        color: record.isOngoing ? AppColors.error : AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (record.temperature != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '${record.temperature}°C',
+                      style: AppTextStyles.subtitle.copyWith(color: AppColors.error),
+                    ),
                   ],
+                ],
+              ),
+              if (record.isOngoing)
+                AnimatedButton(
+                  onTap: () => _markRecovered(record),
+                  backgroundColor: AppColors.success,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check, size: 16, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text('已痊愈', style: AppTextStyles.caption.copyWith(color: Colors.white)),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                  ),
+                  child: Text('已痊愈', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
                 ),
-                if (record.isOngoing)
-                  FilledButton.icon(
-                    onPressed: () => _markRecovered(record),
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('已痊愈'),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.green, minimumSize: const Size(0, 32)),
-                  )
-                else
-                  Chip(label: const Text('已痊愈'), backgroundColor: Colors.green.withOpacity(0.1), side: BorderSide.none),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(record.description, style: const TextStyle(fontSize: 14)),
-            const SizedBox(height: 8),
-            Row(children: [
-              const Icon(Icons.medical_services, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Expanded(child: Text('治疗: ${record.treatment}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
-            ]),
-            const SizedBox(height: 4),
-            Row(children: [
-              const Icon(Icons.timer, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text('持续: ${record.duration}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-            ]),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(record.description, style: AppTextStyles.body),
+          const SizedBox(height: 8),
+          Row(children: [
+            Icon(Icons.medical_services, size: 16, color: AppColors.textTertiary),
+            const SizedBox(width: 4),
+            Expanded(child: Text('治疗: ${record.treatment}', style: AppTextStyles.caption)),
+          ]),
+          const SizedBox(height: 4),
+          Row(children: [
+            Icon(Icons.timer, size: 16, color: AppColors.textTertiary),
+            const SizedBox(width: 4),
+            Text('持续: ${record.duration}', style: AppTextStyles.caption),
+          ]),
+        ],
       ),
     );
   }

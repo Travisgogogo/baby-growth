@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../widgets/animations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
@@ -105,97 +106,161 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     final chartData = _getChartData();
     
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('生长曲线'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
+        color: AppColors.primary,
+        backgroundColor: Colors.white,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
             : Column(
                 children: [
                   // 指标选择
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
-                      ],
+                  FadeInAnimation(
+                    child: AnimatedCard(
+                      margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+                      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+                      child: Row(
+                        children: [
+                          Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
+                        ],
+                      ),
                     ),
                   ),
                   
                   // 时间范围选择
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: '3m', label: Text('3个月')),
-                        ButtonSegment(value: '6m', label: Text('6个月')),
-                        ButtonSegment(value: '1y', label: Text('1年')),
-                      ],
-                      selected: {_timeRange},
-                      onSelectionChanged: (set) => setState(() => _timeRange = set.first),
+                  FadeInAnimation(
+                    delay: const Duration(milliseconds: 100),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+                      child: SegmentedButton<String>(
+                        style: SegmentedButton.styleFrom(
+                          backgroundColor: AppColors.cardBackground,
+                          selectedBackgroundColor: AppColors.primary,
+                          selectedForegroundColor: Colors.white,
+                          foregroundColor: AppColors.textSecondary,
+                        ),
+                        segments: const [
+                          ButtonSegment(value: '3m', label: Text('3个月')),
+                          ButtonSegment(value: '6m', label: Text('6个月')),
+                          ButtonSegment(value: '1y', label: Text('1年')),
+                        ],
+                        selected: {_timeRange},
+                        onSelectionChanged: (set) => setState(() => _timeRange = set.first),
+                      ),
                     ),
                   ),
                   
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppDimensions.paddingMedium),
                   
                   // 图表
                   Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                      ),
-                      child: chartData.isEmpty
-                          ? const Center(child: Text('暂无数据，请先记录生长数据'))
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(_getMetricTitle(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 16),
-                                Expanded(
-                                  child: LineChart(
-                                    LineChartData(
-                                      gridData: FlGridData(show: true, drawVerticalLine: false),
-                                      titlesData: FlTitlesData(
-                                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
-                                        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                      ),
-                                      borderData: FlBorderData(show: false),
-                                      lineBarsData: [
-                                        LineChartBarData(
-                                          spots: chartData,
-                                          isCurved: true,
-                                          color: AppColors.primary,
-                                          barWidth: 3,
-                                          dotData: FlDotData(show: true),
-                                          belowBarData: BarAreaData(
-                                            show: true,
-                                            color: AppColors.primary.withOpacity(0.1),
-                                          ),
+                    child: FadeInAnimation(
+                      delay: const Duration(milliseconds: 200),
+                      child: AnimatedCard(
+                        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+                        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+                        child: chartData.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.show_chart,
+                                      size: 64,
+                                      color: AppColors.textTertiary.withOpacity(0.5),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      '暂无数据，请先记录生长数据',
+                                      style: AppTextStyles.subtitle.copyWith(color: AppColors.textTertiary),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(_getMetricTitle(), style: AppTextStyles.title),
+                                  const SizedBox(height: AppDimensions.paddingMedium),
+                                  Expanded(
+                                    child: LineChart(
+                                      LineChartData(
+                                        gridData: FlGridData(
+                                          show: true,
+                                          drawVerticalLine: false,
+                                          horizontalInterval: 1,
+                                          getDrawingHorizontalLine: (value) {
+                                            return FlLine(
+                                              color: AppColors.divider,
+                                              strokeWidth: 1,
+                                            );
+                                          },
                                         ),
-                                      ],
+                                        titlesData: FlTitlesData(
+                                          leftTitles: AxisTitles(
+                                            sideTitles: SideTitles(
+                                              showTitles: true,
+                                              reservedSize: 40,
+                                              getTitlesWidget: (value, meta) {
+                                                return Text(
+                                                  value.toStringAsFixed(1),
+                                                  style: AppTextStyles.caption,
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                        ),
+                                        borderData: FlBorderData(show: false),
+                                        lineBarsData: [
+                                          LineChartBarData(
+                                            spots: chartData,
+                                            isCurved: true,
+                                            color: AppColors.primary,
+                                            barWidth: 4,
+                                            dotData: FlDotData(
+                                              show: true,
+                                              getDotPainter: (spot, percent, bar, index) {
+                                                return FlDotCirclePainter(
+                                                  radius: 6,
+                                                  color: AppColors.primary,
+                                                  strokeWidth: 2,
+                                                  strokeColor: Colors.white,
+                                                );
+                                              },
+                                            ),
+                                            belowBarData: BarAreaData(
+                                              show: true,
+                                              color: AppColors.primary.withOpacity(0.15),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
                               ],
                             ),
                     ),
