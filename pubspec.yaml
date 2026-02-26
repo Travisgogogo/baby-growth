@@ -16,6 +16,11 @@ dependencies:
   fl_chart: ^0.65.0
   shared_preferences: ^2.2.2
   image_picker: ^1.0.7
+  
+  # 语音识别
+  onnxruntime: ^1.4.0
+  record: ^5.0.4
+  permission_handler: ^11.3.0
 
 dev_dependencies:
   flutter_test:
