@@ -44,19 +44,19 @@ jobs:
         
         cd myapp
         
-        # Fix Kotlin version to 1.9.0 to match dependencies
-        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
+        # Fix Kotlin version to 1.8.22 to match AndroidX dependencies
+        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.8.22"/' android/settings.gradle
         
         # Fix minSdkVersion - handle both "minSdkVersion 21" and "minSdk = 21" formats
         sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
         sed -i 's/minSdk = .*/minSdk = 24/' android/app/build.gradle
         
-        # Fix compileSdkVersion to 35 for record plugin compatibility
-        sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle
-        sed -i 's/targetSdk .*/targetSdk 35/' android/app/build.gradle
+        # Fix compileSdkVersion to 34 (SDK 35 has resource linking issues in CI)
+        sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle
+        sed -i 's/targetSdk .*/targetSdk 34/' android/app/build.gradle
         
         # Also fix flutter.compileSdkVersion if present
-        sed -i 's/flutter.compileSdkVersion/35/' android/app/build.gradle
+        sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
         
         # Show the build.gradle for debugging
         echo "=== android/app/build.gradle ==="
@@ -68,9 +68,11 @@ jobs:
         RECORD_PLUGIN_PATH="$HOME/.pub-cache/hosted/pub.dev/record_android-1.5.1/android/build.gradle"
         if [ -f "$RECORD_PLUGIN_PATH" ]; then
           echo "Fixing record_android plugin build.gradle..."
-          sed -i 's/flutter\.compileSdkVersion/35/g' "$RECORD_PLUGIN_PATH"
+          sed -i 's/flutter\.compileSdkVersion/34/g' "$RECORD_PLUGIN_PATH"
           # Also fix ndkVersion if present
           sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$RECORD_PLUGIN_PATH"
+          # Fix Kotlin version in plugin to match project
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.8.22'/" "$RECORD_PLUGIN_PATH"
           cat "$RECORD_PLUGIN_PATH"
         fi
         
@@ -78,7 +80,7 @@ jobs:
         find $HOME/.pub-cache/hosted/pub.dev -name "build.gradle" -path "*/android/build.gradle" 2>/dev/null | while read f; do
           if grep -q "flutter.compileSdkVersion" "$f" 2>/dev/null; then
             echo "Fixing: $f"
-            sed -i 's/flutter\.compileSdkVersion/35/g' "$f"
+            sed -i 's/flutter\.compileSdkVersion/34/g' "$f"
           fi
           if grep -q "flutter.ndkVersion" "$f" 2>/dev/null; then
             echo "Fixing ndk: $f"
