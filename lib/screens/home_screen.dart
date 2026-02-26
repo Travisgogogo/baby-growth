@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
+import '../constants/who_growth_data.dart';
 import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
@@ -10,6 +11,7 @@ import '../models/diaper_record.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
 import 'growth_chart_screen.dart';
+import 'growth_chart_detail_screen.dart';
 import 'records_screen.dart';
 import 'milestones_screen.dart';
 import 'profile_screen.dart';
@@ -428,8 +430,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGrowthChart() {
+    // 计算宝宝月龄
+    int? ageInMonths;
+    String? weightPercentile;
+    String? heightPercentile;
+    
+    if (_baby != null && _latestGrowth != null) {
+      ageInMonths = _baby!.ageInMonths;
+      if (ageInMonths != null && _latestGrowth!.weight != null) {
+        final weightData = WHOGrowthData.getWeightForAge(
+          _baby!.gender == '男' ? 'boy' : 'girl',
+          ageInMonths,
+        );
+        if (weightData != null) {
+          weightPercentile = GrowthAssessmentUtil.getPercentileLevel(
+            _latestGrowth!.weight!,
+            weightData,
+          );
+        }
+      }
+      if (ageInMonths != null && _latestGrowth!.height != null) {
+        final heightData = WHOGrowthData.getHeightForAge(
+          _baby!.gender == '男' ? 'boy' : 'girl',
+          ageInMonths,
+        );
+        if (heightData != null) {
+          heightPercentile = GrowthAssessmentUtil.getPercentileLevel(
+            _latestGrowth!.height!,
+            heightData,
+          );
+        }
+      }
+    }
+
     return AnimatedCard(
-      onTap: () => setState(() => _currentIndex = 1),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const GrowthChartDetailScreen()),
+      ),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,15 +480,66 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            height: 140,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          if (_latestGrowth == null)
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              ),
+              child: Center(
+                child: Text('暂无生长数据', style: AppTextStyles.caption),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '体重 ${_latestGrowth!.weight?.toStringAsFixed(1) ?? "--"} kg',
+                          style: AppTextStyles.body,
+                        ),
+                        if (weightPercentile != null)
+                          Text(
+                            weightPercentile,
+                            style: AppTextStyles.caption.copyWith(
+                              color: GrowthAssessmentUtil.getStatusColor(weightPercentile),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, height: 40, color: AppColors.divider),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '身高 ${_latestGrowth!.height?.toStringAsFixed(0) ?? "--"} cm',
+                          style: AppTextStyles.body,
+                        ),
+                        if (heightPercentile != null)
+                          Text(
+                            heightPercentile,
+                            style: AppTextStyles.caption.copyWith(
+                              color: GrowthAssessmentUtil.getStatusColor(heightPercentile),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Center(child: Text('生长曲线图表')),
-          ),
         ],
       ),
     );
@@ -527,12 +616,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMilestones() {
-    final completedCount = _milestoneRecords.where((m) => m.completedDate != null).length;
+    // 计算各分类完成进度
+    final stats = MilestoneStats.calculate(_milestoneRecords);
+    final completedCount = stats.completedCount;
     final totalCount = DefaultMilestones.totalCount;
-    final recentMilestones = _milestoneRecords.take(5).toList();
+    final progressPercent = totalCount > 0 ? (completedCount / totalCount * 100).toInt() : 0;
 
     return AnimatedCard(
-      onTap: () => setState(() => _currentIndex = 3),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MilestonesScreen()),
+      ),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,48 +635,45 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('🎯 发育里程碑', style: AppTextStyles.title),
-              Text('$completedCount/$totalCount 已完成 →', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+              Text('$completedCount/$totalCount →', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 12),
-          if (recentMilestones.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text('暂无里程碑记录', style: AppTextStyles.caption),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: recentMilestones.asMap().entries.map(
-                  (entry) => ListItemAnimation(
-                    index: entry.key,
-                    child: _buildMilestoneItem(entry.value),
-                  ),
-                ).toList(),
-              ),
+          // 总体进度条
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+            child: LinearProgressIndicator(
+              value: totalCount > 0 ? completedCount / totalCount : 0,
+              backgroundColor: AppColors.cardBackground,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+              minHeight: 8,
             ),
+          ),
+          const SizedBox(height: 8),
+          Text('$progressPercent% 已完成', style: AppTextStyles.caption),
+          const SizedBox(height: 12),
+          // 各分类进度
+          Row(
+            children: [
+              _buildCategoryProgress('大运动', stats.completedByCategory[MilestoneCategory.grossMotor] ?? 0, MilestoneCategory.grossMotor.totalCount),
+              _buildCategoryProgress('精细动作', stats.completedByCategory[MilestoneCategory.fineMotor] ?? 0, MilestoneCategory.fineMotor.totalCount),
+              _buildCategoryProgress('语言', stats.completedByCategory[MilestoneCategory.language] ?? 0, MilestoneCategory.language.totalCount),
+              _buildCategoryProgress('社交', stats.completedByCategory[MilestoneCategory.social] ?? 0, MilestoneCategory.social.totalCount),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMilestoneItem(MilestoneRecord milestone) {
-    final isCompleted = milestone.completedDate != null;
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isCompleted ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F7),
-        borderRadius: BorderRadius.circular(8),
-      ),
+  Widget _buildCategoryProgress(String label, int completed, int total) {
+    final percent = total > 0 ? (completed / total * 100).toInt() : 0;
+    return Expanded(
       child: Column(
         children: [
-          Text(isCompleted ? '✅' : '⭕', style: const TextStyle(fontSize: 22)),
+          Text('$completed/$total', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text(milestone.milestoneId, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+          Text(label, style: AppTextStyles.caption.copyWith(fontSize: 10)),
         ],
       ),
     );
