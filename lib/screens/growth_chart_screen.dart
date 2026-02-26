@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../constants/who_growth_data.dart';
 import '../widgets/animations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../services/database_service.dart';
+import 'growth_chart_detail_screen.dart';
 
 class GrowthChartScreen extends StatefulWidget {
   const GrowthChartScreen({super.key});
@@ -112,6 +114,21 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (_baby != null)
+            IconButton(
+              icon: const Icon(Icons.fullscreen),
+              tooltip: '查看详细曲线',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GrowthChartDetailScreen(baby: _baby!),
+                  ),
+                ).then((_) => _loadData());
+              },
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
@@ -126,13 +143,21 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
                     child: AnimatedCard(
                       margin: const EdgeInsets.all(AppDimensions.paddingMedium),
                       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-                      child: Row(
+                      child: Column(
                         children: [
-                          Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
+                          Row(
+                            children: [
+                              Expanded(child: _buildMetricButton('weight', '体重', '${_getLatestWeight()} kg')),
+                              const SizedBox(width: 8),
+                              Expanded(child: _buildMetricButton('height', '身高', '${_getLatestHeight()} cm')),
+                              const SizedBox(width: 8),
+                              Expanded(child: _buildMetricButton('head', '头围', '${_getLatestHead()} cm')),
+                            ],
+                          ),
+                          if (_baby != null && _records.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildQuickAssessment(),
+                          ],
                         ],
                       ),
                     ),
@@ -285,5 +310,118 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.year}年${date.month}月${date.day}日';
+  }
+
+  /// 构建快速评估
+  Widget _buildQuickAssessment() {
+    final latestRecord = _records.first;
+    final ageInMonths = _calculateAgeInMonths(latestRecord.date);
+    
+    GrowthAssessment? assessment;
+    String metricName = '';
+    double? value;
+    
+    switch (_selectedMetric) {
+      case 'weight':
+        if (latestRecord.weight != null) {
+          value = latestRecord.weight;
+          assessment = GrowthAssessmentUtil.assessWeight(
+            _baby!.gender,
+            ageInMonths,
+            latestRecord.weight!,
+          );
+          metricName = '体重';
+        }
+        break;
+      case 'height':
+        if (latestRecord.height != null) {
+          value = latestRecord.height;
+          assessment = GrowthAssessmentUtil.assessHeight(
+            _baby!.gender,
+            ageInMonths,
+            latestRecord.height!,
+          );
+          metricName = '身高';
+        }
+        break;
+      case 'head':
+        if (latestRecord.headCircumference != null) {
+          value = latestRecord.headCircumference;
+          assessment = GrowthAssessmentUtil.assessHeadCircumference(
+            _baby!.gender,
+            ageInMonths,
+            latestRecord.headCircumference!,
+          );
+          metricName = '头围';
+        }
+        break;
+    }
+    
+    if (assessment == null || value == null) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GrowthChartDetailScreen(baby: _baby!),
+          ),
+        ).then((_) => _loadData());
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _getAssessmentColor(assessment.status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          border: Border.all(
+            color: _getAssessmentColor(assessment.status).withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: _getAssessmentColor(assessment.status),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '$metricName: ${value.toStringAsFixed(1)} - ${assessment.status} (P${assessment.percentile.toInt()})',
+                style: AppTextStyles.caption.copyWith(
+                  color: _getAssessmentColor(assessment.status),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: _getAssessmentColor(assessment.status),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 计算月龄
+  int _calculateAgeInMonths(DateTime date) {
+    final diff = date.difference(_baby!.birthDate);
+    return (diff.inDays / 30).floor();
+  }
+
+  /// 获取评估颜色
+  Color _getAssessmentColor(String status) {
+    switch (status) {
+      case '正常':
+        return Colors.green;
+      case '偏低':
+      case '偏高':
+        return Colors.orange;
+      default:
+        return AppColors.textSecondary;
+    }
   }
 }

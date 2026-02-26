@@ -7,7 +7,8 @@ import '../models/growth_record.dart';
 import '../models/feed_record.dart';
 import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
-import '../models/milestone_record.dart';
+import '../models/milestone.dart';
+import '../constants/milestone_data.dart';
 import '../models/photo.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
@@ -294,6 +295,43 @@ class DatabaseService {
     }
   }
 
+  /// 按日期范围获取生长记录
+  Future<List<GrowthRecord>> getGrowthRecordsByDateRange(
+    int babyId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'growth_records',
+        where: 'babyId = ? AND date >= ? AND date <= ?',
+        whereArgs: [
+          babyId,
+          startDate.toIso8601String(),
+          endDate.toIso8601String(),
+        ],
+        orderBy: 'date ASC',
+      );
+      return maps.map((map) => GrowthRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('按日期范围获取生长记录失败: $e');
+      return [];
+    }
+  }
+
+  /// 获取指定月龄范围内的生长记录
+  Future<List<GrowthRecord>> getGrowthRecordsByAgeRange(
+    int babyId,
+    DateTime birthDate,
+    int minMonths,
+    int maxMonths,
+  ) async {
+    final startDate = birthDate.add(Duration(days: minMonths * 30));
+    final endDate = birthDate.add(Duration(days: maxMonths * 30));
+    return getGrowthRecordsByDateRange(babyId, startDate, endDate);
+  }
+
   Future<bool> deleteGrowthRecord(int id) async {
     try {
       final db = await database;
@@ -494,6 +532,135 @@ class DatabaseService {
       return true;
     } catch (e) {
       debugPrint('删除里程碑记录失败: $e');
+      return false;
+    }
+  }
+
+  /// 根据ID删除里程碑记录
+  Future<bool> deleteMilestoneRecordById(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'milestone_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除里程碑记录失败: $e');
+      return false;
+    }
+  }
+
+  /// 更新里程碑记录
+  Future<bool> updateMilestoneRecord(MilestoneRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'milestone_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新里程碑记录失败: $e');
+      return false;
+    }
+  }
+
+  /// 获取指定里程碑ID的记录
+  Future<MilestoneRecord?> getMilestoneRecordByMilestoneId(int babyId, String milestoneId) async {
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'milestone_records',
+        where: 'babyId = ? AND milestoneId = ?',
+        whereArgs: [babyId, milestoneId],
+      );
+      if (maps.isNotEmpty) {
+        return MilestoneRecord.fromMap(maps.first);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('获取里程碑记录失败: $e');
+      return null;
+    }
+  }
+
+  /// 获取指定分类的已完成里程碑记录
+  Future<List<MilestoneRecord>> getMilestoneRecordsByCategory(
+    int babyId,
+    MilestoneCategory category,
+  ) async {
+    try {
+      final db = await database;
+      // 获取所有已完成记录
+      final allRecords = await getMilestoneRecords(babyId);
+      // 过滤指定分类的记录
+      return allRecords.where((record) {
+        final milestone = MilestoneData.getById(record.milestoneId);
+        return milestone?.category == category;
+      }).toList();
+    } catch (e) {
+      debugPrint('获取分类里程碑记录失败: $e');
+      return [];
+    }
+  }
+
+  /// 获取里程碑统计信息
+  Future<MilestoneStats> getMilestoneStats(
+    int babyId,
+    int currentMonth,
+  ) async {
+    try {
+      final completedRecords = await getMilestoneRecords(babyId);
+      final completedIds = completedRecords.map((r) => r.milestoneId).toSet();
+      
+      int completed = 0;
+      int inProgress = 0;
+      int pending = 0;
+
+      for (final milestone in MilestoneData.allMilestones) {
+        if (completedIds.contains(milestone.id)) {
+          completed++;
+        } else {
+          final status = milestone.getProgressStatus(currentMonth);
+          if (status == 1) {
+            inProgress++;
+          } else if (status == 0) {
+            pending++;
+          } else {
+            // 已过时间范围但未完成
+            inProgress++;
+          }
+        }
+      }
+
+      return MilestoneStats(
+        totalCount: MilestoneData.totalCount,
+        completedCount: completed,
+        inProgressCount: inProgress,
+        pendingCount: pending,
+      );
+    } catch (e) {
+      debugPrint('获取里程碑统计失败: $e');
+      return MilestoneStats(
+        totalCount: MilestoneData.totalCount,
+        completedCount: 0,
+        inProgressCount: 0,
+        pendingCount: MilestoneData.totalCount,
+      );
+    }
+  }
+
+  /// 检查指定里程碑是否已完成
+  Future<bool> isMilestoneCompleted(int babyId, String milestoneId) async {
+    try {
+      final record = await getMilestoneRecordByMilestoneId(babyId, milestoneId);
+      return record != null;
+    } catch (e) {
+      debugPrint('检查里程碑完成状态失败: $e');
       return false;
     }
   }

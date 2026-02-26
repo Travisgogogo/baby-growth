@@ -7,7 +7,7 @@ import '../models/growth_record.dart';
 import '../models/feed_record.dart';
 import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
-import '../models/milestone_record.dart';
+import '../models/milestone.dart';
 import '../services/database_service.dart';
 import 'growth_chart_screen.dart';
 import 'records_screen.dart';
