@@ -215,258 +215,440 @@ class DatabaseService {
   }
 
   // Baby operations
-  Future<Baby> createBaby(Baby baby) async {
-    final db = await database;
-    final id = await db.insert('babies', baby.toMap());
-    return baby.copyWith(id: id);
+  Future<Baby?> createBaby(Baby baby) async {
+    try {
+      final db = await database;
+      final id = await db.insert('babies', baby.toMap());
+      return baby.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建宝宝记录失败: $e');
+      return null;
+    }
   }
 
   Future<Baby?> getBaby(int id) async {
-    final db = await database;
-    final maps = await db.query('babies', where: 'id = ?', whereArgs: [id]);
-    if (maps.isNotEmpty) return Baby.fromMap(maps.first);
-    return null;
+    try {
+      final db = await database;
+      final maps = await db.query('babies', where: 'id = ?', whereArgs: [id]);
+      if (maps.isNotEmpty) return Baby.fromMap(maps.first);
+      return null;
+    } catch (e) {
+      debugPrint('获取宝宝记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<Baby>> getAllBabies() async {
-    final db = await database;
-    final maps = await db.query('babies');
-    return maps.map((map) => Baby.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query('babies');
+      return maps.map((map) => Baby.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取所有宝宝记录失败: $e');
+      return [];
+    }
   }
 
-  Future<void> updateBaby(Baby baby) async {
-    final db = await database;
-    await db.update(
-      'babies',
-      baby.toMap(),
-      where: 'id = ?',
-      whereArgs: [baby.id],
-    );
+  Future<bool> updateBaby(Baby baby) async {
+    try {
+      final db = await database;
+      await db.update(
+        'babies',
+        baby.toMap(),
+        where: 'id = ?',
+        whereArgs: [baby.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新宝宝记录失败: $e');
+      return false;
+    }
   }
 
   // Growth record operations
-  Future<GrowthRecord> createGrowthRecord(GrowthRecord record) async {
-    final db = await database;
-    final id = await db.insert('growth_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<GrowthRecord?> createGrowthRecord(GrowthRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('growth_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建生长记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<GrowthRecord>> getGrowthRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'growth_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'date DESC',
-    );
-    return maps.map((map) => GrowthRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'growth_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'date DESC',
+      );
+      return maps.map((map) => GrowthRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取生长记录失败: $e');
+      return [];
+    }
+  }
+
+  Future<bool> deleteGrowthRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'growth_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除生长记录失败: $e');
+      return false;
+    }
   }
 
   // Feed record operations
-  Future<FeedRecord> createFeedRecord(FeedRecord record) async {
-    final db = await database;
-    final id = await db.insert('feed_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<FeedRecord?> createFeedRecord(FeedRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('feed_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建喂养记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<FeedRecord>> getFeedRecords(int babyId, {int limit = 10}) async {
-    final db = await database;
-    final maps = await db.query(
-      'feed_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'time DESC',
-      limit: limit,
-    );
-    return maps.map((map) => FeedRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'feed_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'time DESC',
+        limit: limit,
+      );
+      return maps.map((map) => FeedRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取喂养记录失败: $e');
+      return [];
+    }
+  }
+
+  Future<bool> updateFeedRecord(FeedRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'feed_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新喂养记录失败: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteFeedRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'feed_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除喂养记录失败: $e');
+      return false;
+    }
   }
 
   // Sleep record operations
-  Future<SleepRecord> createSleepRecord(SleepRecord record) async {
-    final db = await database;
-    final id = await db.insert('sleep_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<SleepRecord?> createSleepRecord(SleepRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('sleep_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建睡眠记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<SleepRecord>> getSleepRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'sleep_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'startTime DESC',
-    );
-    return maps.map((map) => SleepRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'sleep_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'startTime DESC',
+      );
+      return maps.map((map) => SleepRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取睡眠记录失败: $e');
+      return [];
+    }
+  }
+
+  Future<bool> deleteSleepRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'sleep_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除睡眠记录失败: $e');
+      return false;
+    }
   }
 
   // Diaper record operations
-  Future<DiaperRecord> createDiaperRecord(DiaperRecord record) async {
-    final db = await database;
-    final id = await db.insert('diaper_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<DiaperRecord?> createDiaperRecord(DiaperRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('diaper_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建换尿布记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<DiaperRecord>> getDiaperRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'diaper_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'time DESC',
-    );
-    return maps.map((map) => DiaperRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'diaper_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'time DESC',
+      );
+      return maps.map((map) => DiaperRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取换尿布记录失败: $e');
+      return [];
+    }
+  }
+
+  Future<bool> deleteDiaperRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'diaper_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除换尿布记录失败: $e');
+      return false;
+    }
   }
 
   // Milestone record operations
-  Future<MilestoneRecord> createMilestoneRecord(MilestoneRecord record) async {
-    final db = await database;
-    final id = await db.insert('milestone_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<MilestoneRecord?> createMilestoneRecord(MilestoneRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('milestone_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建里程碑记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<MilestoneRecord>> getMilestoneRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'milestone_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'completedDate DESC',
-    );
-    return maps.map((map) => MilestoneRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'milestone_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'completedDate DESC',
+      );
+      return maps.map((map) => MilestoneRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取里程碑记录失败: $e');
+      return [];
+    }
   }
 
-  Future<void> deleteMilestoneRecord(int babyId, String milestoneId) async {
-    final db = await database;
-    await db.delete(
-      'milestone_records',
-      where: 'babyId = ? AND milestoneId = ?',
-      whereArgs: [babyId, milestoneId],
-    );
+  Future<bool> deleteMilestoneRecord(int babyId, String milestoneId) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'milestone_records',
+        where: 'babyId = ? AND milestoneId = ?',
+        whereArgs: [babyId, milestoneId],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除里程碑记录失败: $e');
+      return false;
+    }
   }
 
   // Photo operations
-  Future<Photo> createPhoto(Photo photo) async {
-    final db = await database;
-    final id = await db.insert('photos', photo.toMap());
-    return photo.copyWith(id: id);
+  Future<Photo?> createPhoto(Photo photo) async {
+    try {
+      final db = await database;
+      final id = await db.insert('photos', photo.toMap());
+      return photo.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建照片记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<Photo>> getPhotos(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'photos',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'takenAt DESC',
-    );
-    return maps.map((map) => Photo.fromMap(map)).toList();
-  }
-
-  // Delete operations
-  Future<void> deleteFeedRecord(int id) async {
-    final db = await database;
-    await db.delete('feed_records', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> deleteGrowthRecord(int id) async {
-    final db = await database;
-    await db.delete('growth_records', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> deleteSleepRecord(int id) async {
-    final db = await database;
-    await db.delete('sleep_records', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> deleteDiaperRecord(int id) async {
-    final db = await database;
-    await db.delete('diaper_records', where: 'id = ?', whereArgs: [id]);
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'photos',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'takenAt DESC',
+      );
+      return maps.map((map) => Photo.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取照片记录失败: $e');
+      return [];
+    }
   }
 
   // Update operations
-  Future<void> updateFeedRecord(FeedRecord record) async {
-    final db = await database;
-    await db.update(
-      'feed_records',
-      record.toMap(),
-      where: 'id = ?',
-      whereArgs: [record.id],
-    );
-  }
-
-  Future<void> updateGrowthRecord(GrowthRecord record) async {
-    final db = await database;
-    await db.update(
-      'growth_records',
-      record.toMap(),
-      where: 'id = ?',
-      whereArgs: [record.id],
-    );
+  Future<bool> updateGrowthRecord(GrowthRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'growth_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新生长记录失败: $e');
+      return false;
+    }
   }
 
   // Illness record operations
-  Future<IllnessRecord> createIllnessRecord(IllnessRecord record) async {
-    final db = await database;
-    final id = await db.insert('illness_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<IllnessRecord?> createIllnessRecord(IllnessRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('illness_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建疾病记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<IllnessRecord>> getIllnessRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'illness_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'startTime DESC',
-    );
-    return maps.map((map) => IllnessRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'illness_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'startTime DESC',
+      );
+      return maps.map((map) => IllnessRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取疾病记录失败: $e');
+      return [];
+    }
   }
 
-  Future<void> updateIllnessRecord(IllnessRecord record) async {
-    final db = await database;
-    await db.update(
-      'illness_records',
-      record.toMap(),
-      where: 'id = ?',
-      whereArgs: [record.id],
-    );
+  Future<bool> updateIllnessRecord(IllnessRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'illness_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新疾病记录失败: $e');
+      return false;
+    }
   }
 
-  Future<void> deleteIllnessRecord(int id) async {
-    final db = await database;
-    await db.delete('illness_records', where: 'id = ?', whereArgs: [id]);
+  Future<bool> deleteIllnessRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete('illness_records', where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (e) {
+      debugPrint('删除疾病记录失败: $e');
+      return false;
+    }
   }
 
   // Vaccine record operations
-  Future<VaccineRecord> createVaccineRecord(VaccineRecord record) async {
-    final db = await database;
-    final id = await db.insert('vaccine_records', record.toMap());
-    return record.copyWith(id: id);
+  Future<VaccineRecord?> createVaccineRecord(VaccineRecord record) async {
+    try {
+      final db = await database;
+      final id = await db.insert('vaccine_records', record.toMap());
+      return record.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建疫苗记录失败: $e');
+      return null;
+    }
   }
 
   Future<List<VaccineRecord>> getVaccineRecords(int babyId) async {
-    final db = await database;
-    final maps = await db.query(
-      'vaccine_records',
-      where: 'babyId = ?',
-      whereArgs: [babyId],
-      orderBy: 'scheduledTime ASC',
-    );
-    return maps.map((map) => VaccineRecord.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'vaccine_records',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'scheduledTime ASC',
+      );
+      return maps.map((map) => VaccineRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取疫苗记录失败: $e');
+      return [];
+    }
   }
 
-  Future<void> updateVaccineRecord(VaccineRecord record) async {
-    final db = await database;
-    await db.update(
-      'vaccine_records',
-      record.toMap(),
-      where: 'id = ?',
-      whereArgs: [record.id],
-    );
+  Future<bool> updateVaccineRecord(VaccineRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'vaccine_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新疫苗记录失败: $e');
+      return false;
+    }
   }
 
-  Future close() async {
-    final db = await database;
-    db.close();
+  Future<bool> close() async {
+    try {
+      final db = await database;
+      await db.close();
+      return true;
+    } catch (e) {
+      debugPrint('关闭数据库失败: $e');
+      return false;
+    }
   }
 }
