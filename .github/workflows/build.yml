@@ -35,6 +35,13 @@ jobs:
         cp -r $GITHUB_WORKSPACE/lib myapp/
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
         
+        # Create assets directory and download model file
+        mkdir -p myapp/assets/models
+        curl -L -o myapp/assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
+        wget -O myapp/assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
+        
         cd myapp
         
         # Fix Kotlin version to 1.9.0 to match dependencies
@@ -107,6 +114,13 @@ jobs:
         rm -rf myapp/lib
         cp -r $GITHUB_WORKSPACE/lib myapp/
         cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
+        
+        # Create assets directory and download model file
+        mkdir -p myapp/assets/models
+        curl -L -o myapp/assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
+        wget -O myapp/assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
         
         cd myapp
         
