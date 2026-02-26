@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+// import 'package:image_picker/image_picker.dart';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../widgets/animations.dart';
@@ -34,7 +34,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   String? _photoPath;
   bool _isSaving = false;
 
-  final ImagePicker _imagePicker = ImagePicker();
+  // final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -56,6 +56,11 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   }
 
   Future<void> _pickImage() async {
+    // 图片选择功能暂时禁用
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('图片选择功能暂时不可用')),
+    );
+    /*
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -74,9 +79,15 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         );
       }
     }
+    */
   }
 
   Future<void> _takePhoto() async {
+    // 拍照功能暂时禁用
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('拍照功能暂时不可用')),
+    );
+    /*
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -95,6 +106,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         );
       }
     }
+    */
   }
 
   Future<void> _selectDate() async {
