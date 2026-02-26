@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import '../services/paraformer_service.dart';
+import '../services/baidu_voice_service.dart';
 import '../services/nlp_parser.dart';
 
 /// 语音记录按钮
@@ -20,7 +20,7 @@ class VoiceRecordButton extends StatefulWidget {
 
 class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   final _audioRecorder = AudioRecorder();
-  final _paraformer = ParaformerService();
+  final _voiceService = BaiduVoiceService();
   bool _isRecording = false;
   bool _isProcessing = false;
   String? _recordPath;
@@ -28,15 +28,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   @override
   void initState() {
     super.initState();
-    _initParaformer();
-  }
-
-  Future<void> _initParaformer() async {
-    try {
-      await _paraformer.initialize();
-    } catch (e) {
-      print('Paraformer 初始化失败: $e');
-    }
+    // 百度服务无需预初始化
   }
 
   Future<void> _startRecording() async {
@@ -82,10 +74,9 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
       // 读取音频文件
       final audioFile = File(path);
-      final audioData = await audioFile.readAsBytes();
 
-      // 语音识别
-      final text = await _paraformer.recognize(audioData);
+      // 语音识别（百度API）
+      final text = await _voiceService.recognize(audioFile);
 
       setState(() => _isProcessing = false);
 
@@ -205,7 +196,6 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   @override
   void dispose() {
     _audioRecorder.dispose();
-    _paraformer.dispose();
     super.dispose();
   }
 }
