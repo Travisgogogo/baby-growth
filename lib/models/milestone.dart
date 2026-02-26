@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import '../constants/milestone_data.dart';
+
 /// 里程碑分类枚举
 enum MilestoneCategory {
   grossMotor,    // 大运动
