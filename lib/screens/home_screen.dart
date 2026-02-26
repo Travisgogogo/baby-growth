@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../constants/milestone_data.dart';
+import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -404,101 +406,86 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionButton(_ActionItem action) {
-    return GestureDetector(
+    return AnimatedButton(
       onTap: action.onTap,
+      backgroundColor: action.bgColor,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: action.bgColor,
-              borderRadius: BorderRadius.circular(8),
+          Text(action.icon, style: const TextStyle(fontSize: 28)),
+          const SizedBox(height: 6),
+          Text(
+            action.label,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
             ),
-            child: Center(child: Text(action.icon, style: const TextStyle(fontSize: 20))),
           ),
-          const SizedBox(height: 3),
-          Text(action.label, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
         ],
       ),
     );
   }
 
   Widget _buildGrowthChart() {
-    return GestureDetector(
+    return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 1),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('📈 生长曲线', style: AppTextStyles.title),
+              Text('查看详情 →', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 140,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('📈 生长曲线', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('查看详情 →', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(
-              height: 140,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(child: Text('生长曲线图表')),
-            ),
-          ],
-        ),
+            child: const Center(child: Text('生长曲线图表')),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildRecentRecords() {
-    return GestureDetector(
+    return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
-      child: Container(
-        margin: const EdgeInsets.all(10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('📝 今日记录', style: AppTextStyles.title),
+              Text('全部记录 →', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_recentFeeds.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text('暂无记录', style: AppTextStyles.caption),
+              ),
+            )
+          else
+            ..._recentFeeds.take(3).toList().asMap().entries.map(
+              (entry) => ListItemAnimation(
+                index: entry.key,
+                child: _buildRecordItem(entry.value),
+              ),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('📝 今日记录', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('全部记录 →', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (_recentFeeds.isEmpty)
-              const Center(child: Text('暂无记录', style: TextStyle(color: Colors.grey)))
-            else
-              ..._recentFeeds.take(3).map((feed) => _buildRecordItem(feed)),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -541,46 +528,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMilestones() {
     final completedCount = _milestoneRecords.where((m) => m.completedDate != null).length;
-    final totalCount = 23; // 总里程碑数
+    final totalCount = DefaultMilestones.totalCount;
     final recentMilestones = _milestoneRecords.take(5).toList();
 
-    return GestureDetector(
+    return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 3),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('🎯 发育里程碑', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('$completedCount/$totalCount 已完成 →', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (recentMilestones.isEmpty)
-              const Center(child: Text('暂无里程碑记录', style: TextStyle(color: Colors.grey, fontSize: 12)))
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: recentMilestones.map((m) => _buildMilestoneItem(m)).toList(),
-                ),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('🎯 发育里程碑', style: AppTextStyles.title),
+              Text('$completedCount/$totalCount 已完成 →', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (recentMilestones.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text('暂无里程碑记录', style: AppTextStyles.caption),
               ),
-          ],
-        ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: recentMilestones.asMap().entries.map(
+                  (entry) => ListItemAnimation(
+                    index: entry.key,
+                    child: _buildMilestoneItem(entry.value),
+                  ),
+                ).toList(),
+              ),
+            ),
+        ],
       ),
     );
   }
