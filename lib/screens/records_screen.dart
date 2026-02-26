@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -234,7 +235,7 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
     return Scaffold(
       appBar: AppBar(
         title: const Text('全部记录'),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: const AppColors.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,

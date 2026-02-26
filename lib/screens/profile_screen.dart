@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
@@ -277,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的'),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: const AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: ListView(
@@ -308,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            colors: [AppColors.primary, AppColors.secondary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -323,7 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          colors: [AppColors.primary, AppColors.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -371,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF667eea)),
+      leading: Icon(icon, color: const AppColors.primary),
       title: Text(title),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,

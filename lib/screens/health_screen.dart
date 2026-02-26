@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
@@ -49,6 +50,12 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -179,7 +186,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
     return Scaffold(
       appBar: AppBar(
         title: const Text('健康管理'),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: const AppColors.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
@@ -203,7 +210,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddIllnessDialog,
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: const AppColors.primary,
         child: const Icon(Icons.add),
       ),
     );
@@ -217,7 +224,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+              colors: [AppColors.primary, AppColors.secondary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

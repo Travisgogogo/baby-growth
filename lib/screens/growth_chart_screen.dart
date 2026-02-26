@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
@@ -106,7 +107,7 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('生长曲线'),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: const AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: RefreshIndicator(
@@ -183,12 +184,12 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
                                         LineChartBarData(
                                           spots: chartData,
                                           isCurved: true,
-                                          color: const Color(0xFF667eea),
+                                          color: const AppColors.primary,
                                           barWidth: 3,
                                           dotData: FlDotData(show: true),
                                           belowBarData: BarAreaData(
                                             show: true,
-                                            color: const Color(0xFF667eea).withOpacity(0.1),
+                                            color: const AppColors.primary.withOpacity(0.1),
                                           ),
                                         ),
                                       ],
@@ -235,12 +236,12 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF667eea) : const Color(0xFFF8F9FF),
+          color: isSelected ? const AppColors.primary : const Color(0xFFF8F9FF),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : const Color(0xFF667eea))),
+            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : const AppColors.primary)),
             const SizedBox(height: 4),
             Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey)),
           ],

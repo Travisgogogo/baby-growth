@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -92,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF667eea),
+        selectedItemColor: const AppColors.primary,
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
@@ -275,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          colors: [AppColors.primary, AppColors.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
