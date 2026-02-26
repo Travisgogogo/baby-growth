@@ -18,9 +18,10 @@ dependencies:
   image_picker: ^1.0.7
   
   # 语音识别
-  record: ^4.4.4
+  record: ^6.0.0
   permission_handler: ^11.3.0
   http: ^1.2.0
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
