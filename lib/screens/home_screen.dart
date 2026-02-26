@@ -655,10 +655,10 @@ class _HomeScreenState extends State<HomeScreen> {
           // 各分类进度
           Row(
             children: [
-              _buildCategoryProgress('大运动', stats.completedByCategory[MilestoneCategory.grossMotor] ?? 0, MilestoneCategory.grossMotor.totalCount),
-              _buildCategoryProgress('精细动作', stats.completedByCategory[MilestoneCategory.fineMotor] ?? 0, MilestoneCategory.fineMotor.totalCount),
-              _buildCategoryProgress('语言', stats.completedByCategory[MilestoneCategory.language] ?? 0, MilestoneCategory.language.totalCount),
-              _buildCategoryProgress('社交', stats.completedByCategory[MilestoneCategory.social] ?? 0, MilestoneCategory.social.totalCount),
+              _buildCategoryProgress('大运动', stats.completedByCategory[MilestoneCategory.grossMotor] ?? 0, MilestoneData.countByCategory[MilestoneCategory.grossMotor] ?? 0),
+              _buildCategoryProgress('精细动作', stats.completedByCategory[MilestoneCategory.fineMotor] ?? 0, MilestoneData.countByCategory[MilestoneCategory.fineMotor] ?? 0),
+              _buildCategoryProgress('语言', stats.completedByCategory[MilestoneCategory.language] ?? 0, MilestoneData.countByCategory[MilestoneCategory.language] ?? 0),
+              _buildCategoryProgress('社交', stats.completedByCategory[MilestoneCategory.socialEmotion] ?? 0, MilestoneData.countByCategory[MilestoneCategory.socialEmotion] ?? 0),
             ],
           ),
         ],

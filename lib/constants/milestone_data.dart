@@ -397,3 +397,16 @@ class MilestoneData {
     return warnings;
   }
 }
+
+/// 别名类，用于兼容旧代码引用
+class DefaultMilestones {
+  DefaultMilestones._();
+  
+  static List<Milestone> get all => MilestoneData.allMilestones;
+  static int get totalCount => all.length;
+  static Map<MilestoneCategory, int> get countByCategory => MilestoneData.countByCategory;
+  
+  static Milestone? getMilestoneById(String id) => MilestoneData.getMilestoneById(id);
+  static List<Milestone> getMilestonesForAge(int month) => MilestoneData.getMilestonesForAge(month);
+  static List<String> getDevelopmentWarnings(int month) => MilestoneData.getDevelopmentWarnings(month);
+}

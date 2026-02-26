@@ -78,7 +78,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   }
 
   /// 获取当前月龄应关注的里程碑
-  List<MilestoneDef> _getCurrentMilestones() {
+  List<Milestone> _getCurrentMilestones() {
     return DefaultMilestones.getMilestonesForAge(_babyAgeInMonths)
         .where((m) => !_completedRecords.any((r) => r.milestoneId == m.id))
         .take(3)
