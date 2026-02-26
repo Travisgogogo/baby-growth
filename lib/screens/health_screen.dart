@@ -146,8 +146,10 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
           FilledButton(
             onPressed: () async {
               if (symptomController.text.isNotEmpty && _baby != null) {
+                final babyId = _baby!.id;
+                if (babyId == null) return;
                 final record = IllnessRecord(
-                  babyId: _baby!.id!,
+                  babyId: babyId,
                   startTime: DateTime.now(),
                   symptom: symptomController.text,
                   temperature: tempController.text.isNotEmpty ? double.tryParse(tempController.text) : null,

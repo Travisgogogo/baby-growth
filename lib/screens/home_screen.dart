@@ -252,9 +252,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       birthHeadCircumference: double.tryParse(headController.text),
                     ),
                   );
-                  Navigator.pop(context);
-                  setState(() => _baby = newBaby);
-                  await _loadBabyData(newBaby.id!);
+                  if (newBaby != null) {
+                    Navigator.pop(context);
+                    setState(() => _baby = newBaby);
+                    final babyId = newBaby.id;
+                    if (babyId != null) {
+                      await _loadBabyData(babyId);
+                    }
+                  }
                 }
               },
               child: const Text('保存'),
@@ -644,14 +649,16 @@ class _HomeScreenState extends State<HomeScreen> {
             FilledButton(
               onPressed: () async {
                 if (amountController.text.isNotEmpty && _baby != null) {
+                  final babyId = _baby!.id;
+                  if (babyId == null) return;
                   final record = FeedRecord(
-                    babyId: _baby!.id!,
+                    babyId: babyId,
                     type: feedType,
                     amount: double.tryParse(amountController.text) ?? 0,
                     time: DateTime.now(),
                   );
                   await DatabaseService.instance.createFeedRecord(record);
-                  await _loadBabyData(_baby!.id!);
+                  await _loadBabyData(babyId);
                   if (mounted) Navigator.pop(context);
                 }
               },
@@ -677,12 +684,14 @@ class _HomeScreenState extends State<HomeScreen> {
           FilledButton(
             onPressed: () async {
               if (_baby != null) {
+                final babyId = _baby!.id;
+                if (babyId == null) return;
                 final record = SleepRecord(
-                  babyId: _baby!.id!,
+                  babyId: babyId,
                   startTime: DateTime.now(),
                 );
                 await DatabaseService.instance.createSleepRecord(record);
-                await _loadBabyData(_baby!.id!);
+                await _loadBabyData(babyId);
                 if (mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -730,13 +739,15 @@ class _HomeScreenState extends State<HomeScreen> {
             FilledButton(
               onPressed: () async {
                 if (_baby != null) {
+                  final babyId = _baby!.id;
+                  if (babyId == null) return;
                   final record = DiaperRecord(
-                    babyId: _baby!.id!,
+                    babyId: babyId,
                     time: DateTime.now(),
                     type: diaperType,
                   );
                   await DatabaseService.instance.createDiaperRecord(record);
-                  await _loadBabyData(_baby!.id!);
+                  await _loadBabyData(babyId);
                   if (mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -806,15 +817,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   (weightController.text.isNotEmpty || 
                    heightController.text.isNotEmpty || 
                    headController.text.isNotEmpty)) {
+                final babyId = _baby!.id;
+                if (babyId == null) return;
                 final record = GrowthRecord(
-                  babyId: _baby!.id!,
+                  babyId: babyId,
                   date: DateTime.now(),
                   weight: double.tryParse(weightController.text),
                   height: double.tryParse(heightController.text),
                   headCircumference: double.tryParse(headController.text),
                 );
                 await DatabaseService.instance.createGrowthRecord(record);
-                await _loadBabyData(_baby!.id!);
+                await _loadBabyData(babyId);
                 if (mounted) Navigator.pop(context);
               }
             },

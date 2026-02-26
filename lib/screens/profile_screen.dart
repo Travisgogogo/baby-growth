@@ -44,7 +44,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     try {
-      final babyId = _baby!.id!;
+      final babyId = _baby?.id;
+      if (babyId == null) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('备份失败: 宝宝信息不存在')),
+        );
+        return;
+      }
       final backup = {
         'version': '1.0',
         'timestamp': DateTime.now().toIso8601String(),
