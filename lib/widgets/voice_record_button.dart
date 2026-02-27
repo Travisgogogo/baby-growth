@@ -35,7 +35,17 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
   Future<void> _initRecorder() async {
     _recorder = FlutterSoundRecorder();
+    
+    // 请求录音权限
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      print('麦克风权限被拒绝');
+      return;
+    }
+    
+    // 打开录音器
     await _recorder!.openRecorder();
+    print('录音器初始化成功');
   }
 
   Future<void> _startRecording() async {
@@ -64,15 +74,19 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
       // 获取临时目录
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioPath = '${tempDir.path}/voice_record_$timestamp.pcm';
+      _audioPath = '${tempDir.path}/voice_record_$timestamp.wav';
 
-      // 开始录音 - PCM 16kHz, 16bit, 单声道
+      print('开始录音，保存到: $_audioPath');
+      
+      // 开始录音 - WAV 格式
       await _recorder!.startRecorder(
         toFile: _audioPath,
-        codec: Codec.pcm16,
+        codec: Codec.pcm16WAV,
         sampleRate: 16000,
         numChannels: 1,
       );
+      
+      print('录音已启动');
 
       setState(() {
         _isRecording = true;
@@ -99,13 +113,22 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
     });
 
     try {
+      print('停止录音...');
       // 停止录音
       await _recorder!.stopRecorder();
+      print('录音已停止，文件路径: $_audioPath');
       
       if (_audioPath != null) {
         final audioFile = File(_audioPath!);
         
-        if (await audioFile.exists()) {
+        // 等待文件写入完成
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        final fileExists = await audioFile.exists();
+        final fileSize = fileExists ? await audioFile.length() : 0;
+        print('文件存在: $fileExists, 文件大小: $fileSize 字节');
+        
+        if (fileExists && fileSize > 0) {
           // 调用百度语音识别
           final baiduService = BaiduVoiceService();
           final result = await baiduService.recognize(audioFile);
@@ -139,9 +162,15 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
           } else {
             // 显示具体的错误信息
             if (mounted) {
+              String displayError = errorMsg ?? "未能识别语音，请重试";
+              if (fileSize == 0) {
+                displayError = "录音文件为空，请检查麦克风权限";
+              } else if (fileSize < 1000) {
+                displayError = "录音时间太短，请长按说话按钮至少1秒";
+              }
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('🎤 ${errorMsg ?? "未能识别语音，请重试"}'),
+                  content: Text('🎤 $displayError'),
                   duration: const Duration(seconds: 3),
                 ),
               );
