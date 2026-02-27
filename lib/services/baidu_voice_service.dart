@@ -66,6 +66,14 @@ class BaiduVoiceService {
       
       // 读取音频文件
       final bytes = await audioFile.readAsBytes();
+      print('读取到的字节数: ${bytes.length}');
+      
+      if (bytes.isEmpty) {
+        print('音频文件内容为空');
+        return [null, '音频文件内容为空'];
+      }
+      
+      print('音频前10字节: ${bytes.take(10).toList()}');
       
       // 判断格式
       final fileName = audioFile.path.toLowerCase();
@@ -80,7 +88,7 @@ class BaiduVoiceService {
         contentType = 'audio/pcm;rate=16000';
       }
       
-      print('使用 RAW 方式上传，Content-Type: $contentType');
+      print('使用 RAW 方式上传，Content-Type: $contentType, 数据大小: ${bytes.length}');
       
       // 使用 RAW 方式上传 - 参数放在 URL 中
       final response = await http.post(
