@@ -62,6 +62,16 @@ jobs:
         echo "=== android/app/build.gradle ==="
         cat android/app/build.gradle
         
+        # Disable R8/minify in build.gradle to fix sealed classes issue with record_android plugin
+        echo "Disabling R8/minify in build.gradle..."
+        sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+        sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
+        # Ensure minifyEnabled is set to false in release build type
+        sed -i '/buildTypes {/,/}/ { s/minifyEnabled .*/minifyEnabled false/ }' android/app/build.gradle
+        
+        echo "=== Updated android/app/build.gradle ==="
+        cat android/app/build.gradle
+        
         flutter pub get
         
         # Fix record_android plugin build.gradle - replace flutter.compileSdkVersion with hardcoded value
