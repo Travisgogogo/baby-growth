@@ -65,7 +65,8 @@ class MainActivity: FlutterActivity() {
             }
         }
 
-        registerReceiver(downloadReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        registerReceiver(downloadReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_NOT_EXPORTED else 0)
         Toast.makeText(this, "开始下载更新...", Toast.LENGTH_SHORT).show()
     }
 
