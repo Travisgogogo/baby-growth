@@ -88,7 +88,9 @@ jobs:
           fi
         done
         
-        flutter build apk --release
+        # Build with --no-shrink to avoid R8 sealed classes issue with record_android plugin
+        # The plugin uses Kotlin sealed classes which R8 doesn't support as program classes
+        flutter build apk --release --no-shrink
         
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
