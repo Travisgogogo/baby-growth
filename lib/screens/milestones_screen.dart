@@ -111,7 +111,6 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                     SliverToBoxAdapter(
                       child: Column(
                         children: [
-                          _buildBabyInfoCard(),
                           _buildProgressSection(),
                           _buildCategoryProgressSection(),
                           _buildCurrentMilestonesSection(),
@@ -167,114 +166,6 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
           tooltip: '查看全部',
         ),
       ],
-    );
-  }
-
-  /// 宝宝信息卡片 - 现代育儿App风格
-  Widget _buildBabyInfoCard() {
-    return FadeInAnimation(
-      child: Container(
-        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
-        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // 头像
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: _baby?.avatarPath != null
-                    ? ClipOval(
-                        child: Image.file(
-                          File(_baby!.avatarPath!),
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Text(
-                        _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            // 信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _baby?.name ?? '',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_babyAgeInMonths}个月',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_baby?.gender}宝 · ${_baby?.ageDisplay ?? ''}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
