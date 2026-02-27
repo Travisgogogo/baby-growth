@@ -44,6 +44,12 @@ jobs:
         
         flutter pub get
         
+        # Clean gradle cache to avoid record_android plugin issues
+        cd android
+        ./gradlew clean || true
+        rm -rf ~/.gradle/caches/
+        cd ..
+        
         # Build APK - no flutter create needed, project structure is in repo
         flutter build apk --release
     
