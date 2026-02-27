@@ -8,7 +8,7 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     
     steps:
     - uses: actions/checkout@v4
@@ -25,204 +25,33 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
+    - name: Download model file
+      run: |
+        mkdir -p assets/models
+        curl -L -o assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
+        wget -O assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
+    
     - name: Build APK
       run: |
-        cd /tmp
-        rm -rf myapp
-        flutter create --platforms=android myapp
-        
-        rm -rf myapp/lib
-        cp -r $GITHUB_WORKSPACE/lib myapp/
-        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
-        
-        # Create assets directory and download model file
-        mkdir -p myapp/assets/models
-        curl -L -o myapp/assets/models/paraformer-zh-tiny.onnx \
-          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
-        wget -O myapp/assets/models/paraformer-zh-tiny.onnx \
-          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
-        
-        cd myapp
-        
-        # Fix Kotlin version to 1.9.0 to match AndroidX dependencies (1.8.22 too old for sealed classes)
-        # Try different possible formats in settings.gradle
-        sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
-        sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" android/settings.gradle
-        # Also try plugins block format
-        sed -i 's/kotlin("android") version ".*"/kotlin("android") version "1.9.0"/' android/settings.gradle
-        
-        # Fix minSdkVersion - handle both "minSdkVersion 21" and "minSdk = 21" formats
-        sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
-        sed -i 's/minSdk = .*/minSdk = 24/' android/app/build.gradle
-        
-        # Fix compileSdkVersion to 34 (SDK 35 has resource linking issues in CI)
-        sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle
-        sed -i 's/targetSdk .*/targetSdk 34/' android/app/build.gradle
-        
-        # Also fix flutter.compileSdkVersion if present
-        sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
+        # Show configuration for debugging
+        echo "=== android/app/build.gradle ==="
+        cat android/app/build.gradle
         
         echo "=== android/settings.gradle ==="
         cat android/settings.gradle
         
-        # Also fix android/build.gradle if it has ext.kotlin_version
-        if [ -f "android/build.gradle" ]; then
-          echo "=== android/build.gradle ==="
-          cat android/build.gradle
-          echo "Fixing kotlin_version in android/build.gradle..."
-          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" android/build.gradle
-          echo "=== Fixed android/build.gradle ==="
-          cat android/build.gradle
-        fi
-        
-        # Completely disable R8 by using ProGuard instead
-        # This fixes the sealed classes issue with record_android plugin
-        echo "Disabling R8, using ProGuard instead..."
-        sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
-        sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
-        
-        # Note: android.enableR8=false was removed in Android Gradle Plugin 7.0
-        # We only use minifyEnabled false and shrinkResources false to disable R8
-        echo "android.useAndroidX=true" >> android/gradle.properties
-        
-        # Ensure release build type doesn't use R8
-        cat > android/app/build.gradle.tmp << 'EOF'
-        def localProperties = new Properties()
-        def localPropertiesFile = rootProject.file('local.properties')
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.withReader('UTF-8') { reader ->
-                localProperties.load(reader)
-            }
-        }
-        
-        def flutterRoot = localProperties.getProperty('flutter.sdk')
-        if (flutterRoot == null) {
-            throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
-        }
-        
-        def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-        if (flutterVersionCode == null) {
-            flutterVersionCode = '1'
-        }
-        
-        def flutterVersionName = localProperties.getProperty('flutter.versionName')
-        if (flutterVersionName == null) {
-            flutterVersionName = '1.0'
-        }
-        
-        apply plugin: 'com.android.application'
-        apply plugin: 'kotlin-android'
-        apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-        
-        android {
-            namespace "com.example.myapp"
-            compileSdk 34
-            ndkVersion "27.0.12077973"
-        
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
-        
-            kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_17.toString()
-            }
-        
-            sourceSets {
-                main.java.srcDirs += 'src/main/kotlin'
-            }
-        
-            defaultConfig {
-                applicationId "com.example.myapp"
-                minSdk 24
-                targetSdk 34
-                versionCode flutterVersionCode.toInteger()
-                versionName flutterVersionName
-            }
-        
-            buildTypes {
-                release {
-                    // Disable R8 completely to fix sealed classes issue
-                    minifyEnabled false
-                    shrinkResources false
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-        
-        flutter {
-            source '../..'
-        }
-        
-        dependencies {}
-        EOF
-        cp android/app/build.gradle.tmp android/app/build.gradle
-        rm android/app/build.gradle.tmp
-        
-        echo "=== Updated android/app/build.gradle ==="
-        cat android/app/build.gradle
-        
-        echo "=== gradle.properties ==="
-        cat android/gradle.properties
-        
-        # Pre-create the pub-cache directory structure and fix plugins BEFORE flutter pub get
-        # This ensures plugins are fixed before they are compiled
-        mkdir -p $HOME/.pub-cache/hosted/pub.dev
-        
-        # Run flutter pub get first to download dependencies
         flutter pub get
         
-        # Fix record_android plugin build.gradle - replace flutter.compileSdkVersion with hardcoded value
-        RECORD_PLUGIN_PATH="$HOME/.pub-cache/hosted/pub.dev/record_android-1.5.1/android/build.gradle"
-        if [ -f "$RECORD_PLUGIN_PATH" ]; then
-          echo "Fixing record_android plugin build.gradle..."
-          sed -i 's/flutter\.compileSdkVersion/34/g' "$RECORD_PLUGIN_PATH"
-          # Also fix ndkVersion if present
-          sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$RECORD_PLUGIN_PATH"
-          # Fix Kotlin version in plugin to match project (1.9.0 required for sealed classes support)
-          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" "$RECORD_PLUGIN_PATH"
-          # Fix kotlin-android plugin version in the plugin's build.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' "$RECORD_PLUGIN_PATH"
-          sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" "$RECORD_PLUGIN_PATH"
-          echo "=== Fixed record_android build.gradle ==="
-          cat "$RECORD_PLUGIN_PATH"
-        fi
-        
-        # Fix ALL plugins that might have similar issues - including Kotlin version
-        find $HOME/.pub-cache/hosted/pub.dev -name "build.gradle" -path "*/android/build.gradle" 2>/dev/null | while read f; do
-          echo "Checking: $f"
-          if grep -q "flutter.compileSdkVersion" "$f" 2>/dev/null; then
-            echo "Fixing compileSdk: $f"
-            sed -i 's/flutter\.compileSdkVersion/34/g' "$f"
-          fi
-          if grep -q "flutter.ndkVersion" "$f" 2>/dev/null; then
-            echo "Fixing ndk: $f"
-            sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$f"
-          fi
-          if grep -q "ext.kotlin_version" "$f" 2>/dev/null; then
-            echo "Fixing kotlin_version: $f"
-            sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" "$f"
-          fi
-          # Fix plugin block format kotlin version
-          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' "$f" 2>/dev/null || true
-          sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" "$f" 2>/dev/null || true
-        done
-        
-        # Clean build to ensure changes take effect
-        flutter clean
-        flutter pub get
-        
-        # Build without R8 - use ProGuard instead (disabled above)
-        # Use --no-tree-shake-icons to avoid potential issues with sealed classes
-        flutter build apk --release --no-tree-shake-icons
-        
-        cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
+        # Build APK - no flutter create needed, project structure is in repo
+        flutter build apk --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
-        path: app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
 
   build-ios:
@@ -238,36 +67,27 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
     
+    - name: Download model file
+      run: |
+        mkdir -p assets/models
+        curl -L -o assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
+        wget -O assets/models/paraformer-zh-tiny.onnx \
+          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
+    
     - name: Build iOS
       run: |
-        cd /tmp
-        rm -rf myapp
-        flutter create --platforms=ios myapp
+        # Create iOS project structure (not included in repo)
+        flutter create --platforms=ios . --project-name baby_growth
         
-        rm -rf myapp/lib
-        cp -r $GITHUB_WORKSPACE/lib myapp/
-        cp $GITHUB_WORKSPACE/pubspec.yaml myapp/
-        
-        # Create assets directory and download model file
-        mkdir -p myapp/assets/models
-        curl -L -o myapp/assets/models/paraformer-zh-tiny.onnx \
-          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx" || \
-        wget -O myapp/assets/models/paraformer-zh-tiny.onnx \
-          "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
-        
-        cd myapp
-        
-        # Configure iOS for simulator build (no code signing required)
         flutter pub get
         flutter build ios --simulator
         
-        # Note: Device builds require Apple Developer account and code signing
-        # For now, we only build for simulator
         echo "iOS simulator build completed successfully"
     
     - name: Upload iOS
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-ios-simulator
-        path: myapp/build/ios/iphonesimulator/Runner.app
+        path: build/ios/iphonesimulator/Runner.app
         retention-days: 30
