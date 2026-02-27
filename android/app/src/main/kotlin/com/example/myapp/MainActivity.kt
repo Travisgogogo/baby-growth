@@ -42,6 +42,7 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun downloadApk(url: String, fileName: String) {
+        // Android 10+ DownloadManager 不需要存储权限
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("正在下载更新")
             .setDescription("宝宝成长记")
