@@ -179,15 +179,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
   }
 
   Future<void> _startUpdate() async {
-    // 请求权限
-    final hasPermission = await UpdateService.requestStoragePermission();
-    if (!hasPermission) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('需要存储权限才能下载更新')),
-      );
-      return;
-    }
-
     setState(() => _isUpdating = true);
 
     try {
