@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/baidu_voice_service.dart';
@@ -8,7 +8,7 @@ import '../services/nlp_parser.dart';
 
 /// 语音记录按钮
 /// 
-/// 使用 record 插件进行录音，并通过百度语音识别服务进行语音转文字
+/// 使用 flutter_sound 插件进行录音，并通过百度语音识别服务进行语音转文字
 class VoiceRecordButton extends StatefulWidget {
   final Function(ParsedRecord?) onResult;
 
@@ -24,11 +24,22 @@ class VoiceRecordButton extends StatefulWidget {
 class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   bool _isRecording = false;
   bool _isProcessing = false;
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  FlutterSoundRecorder? _recorder;
   String? _audioPath;
 
+  @override
+  void initState() {
+    super.initState();
+    _initRecorder();
+  }
+
+  Future<void> _initRecorder() async {
+    _recorder = FlutterSoundRecorder();
+    await _recorder!.openRecorder();
+  }
+
   Future<void> _startRecording() async {
-    if (_isProcessing) return;
+    if (_isProcessing || _recorder == null) return;
 
     try {
       // 请求录音权限
@@ -47,42 +58,21 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
       // 请求存储权限（Android 需要）
       if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.request();
-        // 某些 Android 版本需要管理外部存储权限
-        if (storageStatus != PermissionStatus.granted) {
-          // 尝试请求管理外部存储权限（Android 11+）
-          await Permission.manageExternalStorage.request();
-        }
-      }
-
-      // 检查录音器是否可用
-      final hasPermission = await _audioRecorder.hasPermission();
-      if (!hasPermission) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🎤 没有录音权限'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-        return;
+        await Permission.storage.request();
       }
 
       // 获取临时目录
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioPath = '${tempDir.path}/voice_record_$timestamp.wav';
+      _audioPath = '${tempDir.path}/voice_record_$timestamp.pcm';
 
-      // 配置录音参数 - 使用 WAV 格式，16kHz，16bit，单声道
-      const config = RecordConfig(
-        encoder: AudioEncoder.wav,
+      // 开始录音 - PCM 16kHz, 16bit, 单声道
+      await _recorder!.startRecorder(
+        toFile: _audioPath,
+        codec: Codec.pcm16,
         sampleRate: 16000,
         numChannels: 1,
       );
-
-      // 开始录音
-      await _audioRecorder.start(config, path: _audioPath!);
 
       setState(() {
         _isRecording = true;
@@ -101,7 +91,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   }
 
   Future<void> _stopRecording() async {
-    if (!_isRecording) return;
+    if (!_isRecording || _recorder == null) return;
 
     setState(() {
       _isRecording = false;
@@ -110,9 +100,9 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
     try {
       // 停止录音
-      final path = await _audioRecorder.stop();
+      await _recorder!.stopRecorder();
       
-      if (path != null && _audioPath != null) {
+      if (_audioPath != null) {
         final audioFile = File(_audioPath!);
         
         if (await audioFile.exists()) {
@@ -215,7 +205,8 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   @override
   void dispose() {
     // 清理录音器资源
-    _audioRecorder.dispose();
+    _recorder?.closeRecorder();
+    _recorder = null;
     super.dispose();
   }
 }
