@@ -65,6 +65,16 @@ jobs:
         echo "=== android/settings.gradle ==="
         cat android/settings.gradle
         
+        # Also fix android/build.gradle if it has ext.kotlin_version
+        if [ -f "android/build.gradle" ]; then
+          echo "=== android/build.gradle ==="
+          cat android/build.gradle
+          echo "Fixing kotlin_version in android/build.gradle..."
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" android/build.gradle
+          echo "=== Fixed android/build.gradle ==="
+          cat android/build.gradle
+        fi
+        
         # Completely disable R8 by using ProGuard instead
         # This fixes the sealed classes issue with record_android plugin
         echo "Disabling R8, using ProGuard instead..."
@@ -155,6 +165,11 @@ jobs:
         echo "=== gradle.properties ==="
         cat android/gradle.properties
         
+        # Pre-create the pub-cache directory structure and fix plugins BEFORE flutter pub get
+        # This ensures plugins are fixed before they are compiled
+        mkdir -p $HOME/.pub-cache/hosted/pub.dev
+        
+        # Run flutter pub get first to download dependencies
         flutter pub get
         
         # Fix record_android plugin build.gradle - replace flutter.compileSdkVersion with hardcoded value
@@ -166,23 +181,40 @@ jobs:
           sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$RECORD_PLUGIN_PATH"
           # Fix Kotlin version in plugin to match project (1.9.0 required for sealed classes support)
           sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" "$RECORD_PLUGIN_PATH"
+          # Fix kotlin-android plugin version in the plugin's build.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' "$RECORD_PLUGIN_PATH"
+          sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" "$RECORD_PLUGIN_PATH"
+          echo "=== Fixed record_android build.gradle ==="
           cat "$RECORD_PLUGIN_PATH"
         fi
         
-        # Fix other plugins that might have similar issues
+        # Fix ALL plugins that might have similar issues - including Kotlin version
         find $HOME/.pub-cache/hosted/pub.dev -name "build.gradle" -path "*/android/build.gradle" 2>/dev/null | while read f; do
+          echo "Checking: $f"
           if grep -q "flutter.compileSdkVersion" "$f" 2>/dev/null; then
-            echo "Fixing: $f"
+            echo "Fixing compileSdk: $f"
             sed -i 's/flutter\.compileSdkVersion/34/g' "$f"
           fi
           if grep -q "flutter.ndkVersion" "$f" 2>/dev/null; then
             echo "Fixing ndk: $f"
             sed -i 's/flutter\.ndkVersion/"27.0.12077973"/g' "$f"
           fi
+          if grep -q "ext.kotlin_version" "$f" 2>/dev/null; then
+            echo "Fixing kotlin_version: $f"
+            sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.0'/" "$f"
+          fi
+          # Fix plugin block format kotlin version
+          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' "$f" 2>/dev/null || true
+          sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" "$f" 2>/dev/null || true
         done
         
+        # Clean build to ensure changes take effect
+        flutter clean
+        flutter pub get
+        
         # Build without R8 - use ProGuard instead (disabled above)
-        flutter build apk --release
+        # Use --no-tree-shake-icons to avoid potential issues with sealed classes
+        flutter build apk --release --no-tree-shake-icons
         
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
