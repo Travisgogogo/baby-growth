@@ -108,7 +108,9 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
         if (await audioFile.exists()) {
           // 调用百度语音识别
           final baiduService = BaiduVoiceService();
-          final recognizedText = await baiduService.recognize(audioFile);
+          final result = await baiduService.recognize(audioFile);
+          final recognizedText = result[0];
+          final errorMsg = result[1];
           
           if (recognizedText != null && recognizedText.isNotEmpty) {
             // 解析语音文本
@@ -135,11 +137,12 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
               widget.onResult(parsedResult);
             }
           } else {
+            // 显示具体的错误信息
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🎤 未能识别语音，请重试'),
-                  duration: Duration(seconds: 2),
+                SnackBar(
+                  content: Text('🎤 ${errorMsg ?? "未能识别语音，请重试"}'),
+                  duration: const Duration(seconds: 3),
                 ),
               );
             }
