@@ -118,21 +118,16 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _baby == null
               ? _buildEmptyState()
-              : CustomScrollView(
-                  slivers: [
-                    _buildSliverAppBar(),
-                    SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          _buildProgressSection(),
-                          _buildCategoryProgressSection(),
-                          _buildCurrentMilestonesSection(),
-                          _buildQuickStatsSection(),
-                          const SizedBox(height: 32),
-                        ],
-                      ),
-                    ),
-                  ],
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildProgressSection(),
+                      _buildCategoryProgressSection(),
+                      _buildCurrentMilestonesSection(),
+                      _buildQuickStatsSection(),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
                 ),
     );
