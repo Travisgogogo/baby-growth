@@ -4,16 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:install_plugin/install_plugin.dart';
 
-/// GitHub Releases 更新服务
 class UpdateService {
   static const String _repoOwner = 'Travisgogogo';
   static const String _repoName = 'baby-growth';
   static const String _apiUrl = 'https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest';
-  static const String _apkName = 'app-release.apk';
 
-  /// 检查更新
   static Future<UpdateInfo?> checkUpdate() async {
     try {
       final response = await http.get(
@@ -21,16 +19,12 @@ class UpdateService {
         headers: {'Accept': 'application/vnd.github.v3+json'},
       );
 
-      if (response.statusCode != 200) {
-        print('检查更新失败: ${response.statusCode}');
-        return null;
-      }
+      if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);
       final latestVersion = data['tag_name']?.toString().replaceFirst('v', '');
       final changelog = data['body'] ?? '';
       
-      // 查找 APK 下载链接
       String? apkUrl;
       final assets = data['assets'] as List<dynamic>?;
       if (assets != null) {
@@ -43,15 +37,10 @@ class UpdateService {
         }
       }
 
-      if (latestVersion == null || apkUrl == null) {
-        return null;
-      }
+      if (latestVersion == null || apkUrl == null) return null;
 
-      // 获取当前版本
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
-
-      // 比较版本
       final hasUpdate = _compareVersion(latestVersion, currentVersion) > 0;
 
       return UpdateInfo(
@@ -67,73 +56,60 @@ class UpdateService {
     }
   }
 
-  /// 版本号比较
-  /// 返回: 1=新版本更大, 0=相同, -1=旧版本更大
   static int _compareVersion(String v1, String v2) {
     final parts1 = v1.split('.').map(int.tryParse).whereType<int>().toList();
     final parts2 = v2.split('.').map(int.tryParse).whereType<int>().toList();
-
     for (int i = 0; i < parts1.length && i < parts2.length; i++) {
       if (parts1[i] > parts2[i]) return 1;
       if (parts1[i] < parts2[i]) return -1;
     }
-
-    if (parts1.length > parts2.length) return 1;
-    if (parts1.length < parts2.length) return -1;
-    return 0;
+    return parts1.length.compareTo(parts2.length);
   }
 
-  /// 下载并安装 APK
-  static Future<void> downloadAndInstall(
-    String apkUrl,
-    Function(double progress) onProgress,
-  ) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final savePath = '${dir.path}/$_apkName';
-
-      // 删除旧文件
-      final oldFile = File(savePath);
-      if (await oldFile.exists()) {
-        await oldFile.delete();
-      }
-
-      // 下载文件
-      final request = http.Request('GET', Uri.parse(apkUrl));
-      final response = await request.send();
-      final totalBytes = response.contentLength ?? 0;
-      int receivedBytes = 0;
-
-      final file = File(savePath);
-      final sink = file.openWrite();
-
-      await response.stream.listen(
-        (chunk) {
-          sink.add(chunk);
-          receivedBytes += chunk.length;
-          if (totalBytes > 0) {
-            onProgress(receivedBytes / totalBytes);
-          }
-        },
-        onDone: () async {
-          await sink.close();
-          // 安装 APK
-          final result = await OpenFile.open(savePath);
-          print('安装结果: $result');
-        },
-        onError: (e) {
-          sink.close();
-          throw e;
-        },
-      ).asFuture();
-    } catch (e) {
-      print('下载安装错误: $e');
-      rethrow;
+  static Future<bool> requestInstallPermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.requestInstallPackages.request();
+      return status.isGranted;
     }
+    return true;
+  }
+
+  static Future<String?> downloadApk(String apkUrl, Function(double) onProgress) async {
+    final dir = await getTemporaryDirectory();
+    final savePath = '${dir.path}/app-release.apk';
+    
+    final oldFile = File(savePath);
+    if (await oldFile.exists()) await oldFile.delete();
+
+    final request = http.Request('GET', Uri.parse(apkUrl));
+    final response = await request.send();
+    final totalBytes = response.contentLength ?? 0;
+    int receivedBytes = 0;
+
+    final file = File(savePath);
+    final sink = file.openWrite();
+
+    await response.stream.listen(
+      (chunk) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (totalBytes > 0) onProgress(receivedBytes / totalBytes);
+      },
+      onDone: () async => await sink.close(),
+      onError: (e) {
+        sink.close();
+        throw e;
+      },
+    ).asFuture();
+
+    return savePath;
+  }
+
+  static Future<String?> installApk(String filePath) async {
+    return await InstallPlugin.installApk(filePath, 'com.example.myapp');
   }
 }
 
-/// 更新信息
 class UpdateInfo {
   final String currentVersion;
   final String latestVersion;
@@ -150,16 +126,13 @@ class UpdateInfo {
   });
 }
 
-/// 更新对话框
 class UpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
-
   const UpdateDialog({super.key, required this.updateInfo});
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();
 
-  /// 显示更新对话框
   static Future<void> show(BuildContext context, UpdateInfo info) {
     return showDialog(
       context: context,
@@ -171,110 +144,79 @@ class UpdateDialog extends StatefulWidget {
 
 class _UpdateDialogState extends State<UpdateDialog> {
   bool _isDownloading = false;
+  bool _isInstalling = false;
   double _progress = 0;
   String? _error;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Row(
-        children: [
-          Icon(Icons.system_update, color: Theme.of(context).primaryColor),
-          const SizedBox(width: 8),
-          const Text('发现新版本'),
-        ],
-      ),
+      title: const Text('发现新版本'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '当前版本: ${widget.updateInfo.currentVersion}',
-            style: const TextStyle(fontSize: 14),
-          ),
-          Text(
-            '最新版本: ${widget.updateInfo.latestVersion}',
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (widget.updateInfo.changelog.isNotEmpty) ...[
-            const Text(
-              '更新内容:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 150),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SingleChildScrollView(
-                child: Text(
-                  widget.updateInfo.changelog,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ),
-          ],
+          Text('当前: ${widget.updateInfo.currentVersion}'),
+          Text('最新: ${widget.updateInfo.latestVersion}'),
           if (_isDownloading) ...[
             const SizedBox(height: 16),
             LinearProgressIndicator(value: _progress),
-            const SizedBox(height: 8),
-            Text(
-              '下载中... ${(_progress * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(fontSize: 12),
-            ),
+            Text('${(_progress * 100).toInt()}%'),
           ],
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              '错误: $_error',
-              style: const TextStyle(color: Colors.red, fontSize: 12),
-            ),
-          ],
+          if (_error != null)
+            Text('错误: $_error', style: const TextStyle(color: Colors.red)),
         ],
       ),
       actions: [
-        if (!widget.updateInfo.hasUpdate)
+        if (!_isDownloading && !_isInstalling)
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          )
-        else if (!_isDownloading)
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('稍后更新'),
+            child: const Text('稍后'),
           ),
-        if (widget.updateInfo.hasUpdate && !_isDownloading)
+        if (!_isDownloading && !_isInstalling)
           FilledButton(
-            onPressed: _startDownload,
+            onPressed: _downloadAndInstall,
             child: const Text('立即更新'),
+          ),
+        if (_isInstalling)
+          const FilledButton(
+            onPressed: null,
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ),
       ],
     );
   }
 
-  Future<void> _startDownload() async {
-    setState(() {
-      _isDownloading = true;
-      _error = null;
-    });
+  Future<void> _downloadAndInstall() async {
+    final hasPermission = await UpdateService.requestInstallPermission();
+    if (!hasPermission) {
+      setState(() => _error = '需要安装权限');
+      return;
+    }
+
+    setState(() => _isDownloading = true);
 
     try {
-      await UpdateService.downloadAndInstall(
+      final path = await UpdateService.downloadApk(
         widget.updateInfo.apkUrl,
-        (progress) => setState(() => _progress = progress),
+        (p) => setState(() => _progress = p),
       );
+
+      setState(() {
+        _isDownloading = false;
+        _isInstalling = true;
+      });
+
+      await UpdateService.installApk(path!);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       setState(() {
         _isDownloading = false;
+        _isInstalling = false;
         _error = e.toString();
       });
     }
