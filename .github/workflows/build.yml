@@ -45,7 +45,11 @@ jobs:
         cd myapp
         
         # Fix Kotlin version to 1.9.0 to match AndroidX dependencies (1.8.22 too old for sealed classes)
+        # Try different possible formats in settings.gradle
         sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.0"/' android/settings.gradle
+        sed -i "s/id 'org.jetbrains.kotlin.android' version '.*'/id 'org.jetbrains.kotlin.android' version '1.9.0'/" android/settings.gradle
+        # Also try plugins block format
+        sed -i 's/kotlin("android") version ".*"/kotlin("android") version "1.9.0"/' android/settings.gradle
         
         # Fix minSdkVersion - handle both "minSdkVersion 21" and "minSdk = 21" formats
         sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
@@ -58,9 +62,8 @@ jobs:
         # Also fix flutter.compileSdkVersion if present
         sed -i 's/flutter.compileSdkVersion/34/' android/app/build.gradle
         
-        # Show the build.gradle for debugging
-        echo "=== android/app/build.gradle ==="
-        cat android/app/build.gradle
+        echo "=== android/settings.gradle ==="
+        cat android/settings.gradle
         
         # Completely disable R8 by using ProGuard instead
         # This fixes the sealed classes issue with record_android plugin
