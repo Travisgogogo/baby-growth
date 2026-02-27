@@ -45,8 +45,7 @@ class BaiduVoiceService {
   }
   
   /// 识别音频文件
-  /// [audioFile]: WAV 音频文件 (flutter_sound 生成的是 WAV 格式)
-  /// 返回: [识别文本, 错误信息] - 如果识别成功，错误信息为null；如果失败，识别文本为null
+  /// [audioFile]: 音频文件 (支持 wav, m4a, amr 等格式)
   Future<List<String?>> recognize(File audioFile) async {
     try {
       // 检查文件是否存在和大小
@@ -67,25 +66,38 @@ class BaiduVoiceService {
         return [null, '无法获取百度语音服务授权'];
       }
       
-      // 读取音频文件 (WAV 格式)
+      // 读取音频文件
       final bytes = await audioFile.readAsBytes();
-      
-      // 转为 base64
       final base64Audio = base64Encode(bytes);
-      print('Base64 编码后大小: ${base64Audio.length} 字符');
       
-      // 发送识别请求 - 使用 wav 格式
-      print('正在发送识别请求...');
+      // 根据文件扩展名判断格式
+      final fileName = audioFile.path.toLowerCase();
+      String format;
+      if (fileName.endsWith('.wav')) {
+        format = 'wav';
+      } else if (fileName.endsWith('.m4a') || fileName.endsWith('.mp4')) {
+        format = 'm4a';
+      } else if (fileName.endsWith('.amr')) {
+        format = 'amr';
+      } else if (fileName.endsWith('.pcm')) {
+        format = 'pcm';
+      } else {
+        format = 'm4a';
+      }
+      
+      print('音频格式: $format, 大小: ${bytes.length} 字节');
+      
+      // 发送识别请求
       final response = await http.post(
         Uri.parse(
           'https://vop.baidu.com/server_api'
-          '?dev_pid=1537' // 普通话(纯中文识别)
+          '?dev_pid=1537'
           '&cuid=flutter_app'
           '&token=$token'
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'format': 'wav',
+          'format': format,
           'rate': 16000,
           'channel': 1,
           'cuid': 'flutter_app',
@@ -95,7 +107,6 @@ class BaiduVoiceService {
         }),
       );
       
-      print('收到响应，状态码: ${response.statusCode}');
       final result = jsonDecode(response.body);
       print('百度语音识别结果: $result');
       
@@ -103,52 +114,16 @@ class BaiduVoiceService {
       if (result['err_no'] == 0) {
         final texts = result['result'] as List<dynamic>?;
         if (texts != null && texts.isNotEmpty) {
-          final text = texts.first.toString();
-          print('识别成功: $text');
-          return [text, null];
+          return [texts.first.toString(), null];
         } else {
-          return [null, '未能识别到语音内容，请尝试说话更清晰']; 
+          return [null, '未能识别到语音内容'];
         }
       } else {
         final errMsg = result['err_msg'] ?? '未知错误';
-        final errNo = result['err_no'];
-        print('百度识别错误: $errMsg (错误码: $errNo)');
-        
-        // 根据错误码返回友好的错误信息
-        String userFriendlyError;
-        switch (errNo) {
-          case 3300:
-            userFriendlyError = '音频格式错误，请重试';
-            break;
-          case 3301:
-            userFriendlyError = '音频质量不佳，请说话更清晰';
-            break;
-          case 3302:
-            userFriendlyError = '授权验证失败，请检查网络';
-            break;
-          case 3303:
-            userFriendlyError = '请求过于频繁，请稍后再试';
-            break;
-          case 3304:
-            userFriendlyError = '音频文件过大';
-            break;
-          case 3305:
-            userFriendlyError = '音频时长过长';
-            break;
-          case 3307:
-            userFriendlyError = '未检测到语音，请说话声音大一些';
-            break;
-          case 3308:
-            userFriendlyError = '音频文件为空';
-            break;
-          default:
-            userFriendlyError = '识别失败: $errMsg';
-        }
-        return [null, userFriendlyError];
+        return [null, '识别失败: $errMsg'];
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       print('语音识别错误: $e');
-      print('堆栈: $stackTrace');
       return [null, '识别出错: $e'];
     }
   }
