@@ -50,7 +50,6 @@ android {
 
     buildTypes {
         release {
-            // Disable R8 completely to fix sealed classes issue
             minifyEnabled false
             shrinkResources false
             signingConfig signingConfigs.debug

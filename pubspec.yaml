@@ -17,9 +17,9 @@ dependencies:
   shared_preferences: ^2.2.2
   # image_picker: ^1.0.7  # 暂时禁用，依赖需要 SDK 35
   
-  # 语音识别
-  record: ^6.0.0
-  permission_handler: ^11.3.0
+  # 语音识别 - 暂时禁用，因为 record_android 插件使用 sealed classes 导致 R8 构建失败
+  # record: ^6.0.0
+  # permission_handler: ^11.3.0
   http: ^1.2.0
   crypto: ^3.0.3
 
