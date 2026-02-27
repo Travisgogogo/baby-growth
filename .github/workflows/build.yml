@@ -83,8 +83,15 @@ jobs:
     
     - name: Build iOS
       run: |
+        # Backup pubspec.yaml before flutter create
+        cp pubspec.yaml pubspec.yaml.bak
+        
         # Create iOS project structure (not included in repo)
         flutter create --platforms=ios . --project-name baby_growth
+        
+        # Restore pubspec.yaml with our dependencies
+        cp pubspec.yaml.bak pubspec.yaml
+        rm pubspec.yaml.bak
         
         flutter pub get
         flutter build ios --simulator
