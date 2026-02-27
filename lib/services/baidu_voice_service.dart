@@ -34,16 +34,19 @@ class BaiduVoiceService {
   }
   
   /// 识别音频文件
-  /// [audioFile]: PCM 16kHz, 16bit, 单声道音频文件
+  /// [audioFile]: WAV 音频文件 (flutter_sound 生成的是 WAV 格式)
   Future<String?> recognize(File audioFile) async {
     try {
       final token = await _getAccessToken();
       
-      // 读取音频文件并转为 base64
+      // 读取音频文件 (WAV 格式)
       final bytes = await audioFile.readAsBytes();
+      print('音频文件大小: ${bytes.length} 字节');
+      
+      // 转为 base64
       final base64Audio = base64Encode(bytes);
       
-      // 发送识别请求
+      // 发送识别请求 - 使用 wav 格式
       final response = await http.post(
         Uri.parse(
           'https://vop.baidu.com/server_api'
@@ -53,7 +56,7 @@ class BaiduVoiceService {
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'format': 'pcm',
+          'format': 'wav',  // 改为 wav 格式
           'rate': 16000,
           'channel': 1,
           'cuid': 'flutter_app',
@@ -64,6 +67,7 @@ class BaiduVoiceService {
       );
       
       final result = jsonDecode(response.body);
+      print('百度语音识别结果: $result');
       
       // 解析结果
       if (result['err_no'] == 0) {
@@ -72,7 +76,7 @@ class BaiduVoiceService {
           return texts.first.toString();
         }
       } else {
-        print('百度识别错误: ${result['err_msg']}');
+        print('百度识别错误: ${result['err_msg']} (err_no: ${result['err_no']})');
       }
       
       return null;
