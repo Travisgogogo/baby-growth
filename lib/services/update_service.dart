@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:install_plugin/install_plugin.dart';
 
 class UpdateService {
   static const String _repoOwner = 'Travisgogogo';
   static const String _repoName = 'baby-growth';
   static const String _apiUrl = 'https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest';
+  static const platform = MethodChannel('com.example.myapp/update');
 
   static Future<UpdateInfo?> checkUpdate() async {
     try {
@@ -66,47 +66,26 @@ class UpdateService {
     return parts1.length.compareTo(parts2.length);
   }
 
-  static Future<bool> requestInstallPermission() async {
+  /// 请求存储权限
+  static Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
-      final status = await Permission.requestInstallPackages.request();
+      final status = await Permission.storage.request();
       return status.isGranted;
     }
     return true;
   }
 
-  static Future<String?> downloadApk(String apkUrl, Function(double) onProgress) async {
-    final dir = await getTemporaryDirectory();
-    final savePath = '${dir.path}/app-release.apk';
-    
-    final oldFile = File(savePath);
-    if (await oldFile.exists()) await oldFile.delete();
-
-    final request = http.Request('GET', Uri.parse(apkUrl));
-    final response = await request.send();
-    final totalBytes = response.contentLength ?? 0;
-    int receivedBytes = 0;
-
-    final file = File(savePath);
-    final sink = file.openWrite();
-
-    await response.stream.listen(
-      (chunk) {
-        sink.add(chunk);
-        receivedBytes += chunk.length;
-        if (totalBytes > 0) onProgress(receivedBytes / totalBytes);
-      },
-      onDone: () async => await sink.close(),
-      onError: (e) {
-        sink.close();
-        throw e;
-      },
-    ).asFuture();
-
-    return savePath;
-  }
-
-  static Future<String?> installApk(String filePath) async {
-    return await InstallPlugin.installApk(filePath, 'com.example.myapp');
+  /// 调用原生方法下载并安装 APK
+  static Future<void> downloadAndInstall(String apkUrl) async {
+    try {
+      await platform.invokeMethod('downloadAndInstallApk', {
+        'url': apkUrl,
+        'fileName': 'baby-growth-update.apk',
+      });
+    } on PlatformException catch (e) {
+      print('下载安装失败: ${e.message}');
+      throw Exception('下载安装失败: ${e.message}');
+    }
   }
 }
 
@@ -130,9 +109,6 @@ class UpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
   const UpdateDialog({super.key, required this.updateInfo});
 
-  @override
-  State<UpdateDialog> createState() => _UpdateDialogState();
-
   static Future<void> show(BuildContext context, UpdateInfo info) {
     return showDialog(
       context: context,
@@ -140,13 +116,13 @@ class UpdateDialog extends StatefulWidget {
       builder: (_) => UpdateDialog(updateInfo: info),
     );
   }
+
+  @override
+  State<UpdateDialog> createState() => _UpdateDialogState();
 }
 
 class _UpdateDialogState extends State<UpdateDialog> {
-  bool _isDownloading = false;
-  bool _isInstalling = false;
-  double _progress = 0;
-  String? _error;
+  bool _isUpdating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -157,68 +133,71 @@ class _UpdateDialogState extends State<UpdateDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('当前: ${widget.updateInfo.currentVersion}'),
-          Text('最新: ${widget.updateInfo.latestVersion}'),
-          if (_isDownloading) ...[
-            const SizedBox(height: 16),
-            LinearProgressIndicator(value: _progress),
-            Text('${(_progress * 100).toInt()}%'),
+          Text('最新: ${widget.updateInfo.latestVersion}',
+              style: TextStyle(color: Theme.of(context).primaryColor)),
+          if (widget.updateInfo.changelog.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('更新内容:', style: TextStyle(fontWeight: FontWeight.w500)),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 100),
+              child: SingleChildScrollView(
+                child: Text(widget.updateInfo.changelog, style: const TextStyle(fontSize: 12)),
+              ),
+            ),
           ],
-          if (_error != null)
-            Text('错误: $_error', style: const TextStyle(color: Colors.red)),
         ],
       ),
       actions: [
-        if (!_isDownloading && !_isInstalling)
+        if (!_isUpdating)
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('稍后'),
           ),
-        if (!_isDownloading && !_isInstalling)
+        if (!_isUpdating)
           FilledButton(
-            onPressed: _downloadAndInstall,
+            onPressed: _startUpdate,
             child: const Text('立即更新'),
           ),
-        if (_isInstalling)
+        if (_isUpdating)
           const FilledButton(
             onPressed: null,
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+                SizedBox(width: 8),
+                Text('准备中...'),
+              ],
             ),
           ),
       ],
     );
   }
 
-  Future<void> _downloadAndInstall() async {
-    final hasPermission = await UpdateService.requestInstallPermission();
+  Future<void> _startUpdate() async {
+    // 请求权限
+    final hasPermission = await UpdateService.requestStoragePermission();
     if (!hasPermission) {
-      setState(() => _error = '需要安装权限');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('需要存储权限才能下载更新')),
+      );
       return;
     }
 
-    setState(() => _isDownloading = true);
+    setState(() => _isUpdating = true);
 
     try {
-      final path = await UpdateService.downloadApk(
-        widget.updateInfo.apkUrl,
-        (p) => setState(() => _progress = p),
-      );
-
-      setState(() {
-        _isDownloading = false;
-        _isInstalling = true;
-      });
-
-      await UpdateService.installApk(path!);
+      await UpdateService.downloadAndInstall(widget.updateInfo.apkUrl);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() {
-        _isDownloading = false;
-        _isInstalling = false;
-        _error = e.toString();
-      });
+      setState(() => _isUpdating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('更新失败: $e')),
+      );
     }
   }
 }
