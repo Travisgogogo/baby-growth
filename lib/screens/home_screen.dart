@@ -12,7 +12,6 @@ import '../models/diaper_record.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
 import '../services/update_service.dart';
-import '../widgets/voice_record_button.dart';
 import 'growth_chart_screen.dart';
 import 'growth_chart_detail_screen.dart';
 import 'records_screen.dart';
@@ -452,112 +451,9 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: actions.map((action) => _buildActionButton(action)).toList(),
           ),
-          const SizedBox(height: 12),
-          // 语音记录按钮
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              VoiceRecordButton(
-                onResult: (record) {
-                  if (record != null) {
-                    _handleVoiceRecord(record);
-                  }
-                },
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '按住说话',
-                style: AppTextStyles.caption,
-              ),
-            ],
-          ),
         ],
       ),
     );
-  }
-
-  void _handleVoiceRecord(ParsedRecord record) async {
-    print('处理语音记录: type=${record.type}, data=${record.data}');
-    
-    if (_baby?.id == null) {
-      print('宝宝ID为空，无法保存');
-      return;
-    }
-    
-    final babyId = _baby!.id!;
-    print('宝宝ID: $babyId');
-    
-    try {
-      switch (record.type) {
-        case 'feed':
-          print('保存喂养记录: ${record.data}');
-          final feedRecord = FeedRecord(
-            babyId: babyId,
-            time: record.data['time'] ?? DateTime.now(),
-            type: record.data['type'] ?? '母乳',
-            amount: record.data['amount'],
-          );
-          final id = await DatabaseService.instance.createFeedRecord(feedRecord);
-          print('喂养记录保存成功，ID: $id');
-          break;
-          
-        case 'sleep':
-          print('保存睡眠记录: ${record.data}');
-          final sleepRecord = SleepRecord(
-            babyId: babyId,
-            startTime: record.data['startTime'] ?? DateTime.now(),
-            endTime: record.data['endTime'],
-          );
-          await DatabaseService.instance.createSleepRecord(sleepRecord);
-          print('睡眠记录保存成功');
-          break;
-          
-        case 'diaper':
-          print('保存尿布记录: ${record.data}');
-          final diaperRecord = DiaperRecord(
-            babyId: babyId,
-            time: record.data['time'] ?? DateTime.now(),
-            type: record.data['type'] ?? '尿',
-          );
-          await DatabaseService.instance.createDiaperRecord(diaperRecord);
-          print('尿布记录保存成功');
-          break;
-          
-        case 'growth':
-          print('保存生长记录: ${record.data}');
-          final growthRecord = GrowthRecord(
-            babyId: babyId,
-            date: record.data['date'] ?? DateTime.now(),
-            weight: record.data['weight'],
-            height: record.data['height'],
-          );
-          await DatabaseService.instance.createGrowthRecord(growthRecord);
-          print('生长记录保存成功');
-          break;
-          
-        default:
-          print('未知记录类型: ${record.type}');
-      }
-      
-      // 刷新数据
-      print('刷新数据...');
-      await _loadData();
-      print('数据刷新完成');
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('记录已保存')),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('保存记录失败: $e');
-      print('堆栈: $stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
-      }
-    }
   }
 
   Widget _buildActionButton(_ActionItem action) {
