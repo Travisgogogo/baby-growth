@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../widgets/animations.dart';
@@ -110,6 +111,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                     SliverToBoxAdapter(
                       child: Column(
                         children: [
+                          _buildBabyInfoCard(),
                           _buildProgressSection(),
                           _buildCategoryProgressSection(),
                           _buildCurrentMilestonesSection(),
@@ -141,7 +143,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 150,
+      expandedHeight: 120,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         title: const Text(
@@ -154,25 +156,6 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
         background: Container(
           decoration: const BoxDecoration(
             gradient: AppColors.primaryGradient,
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Spacer(),
-                  Text(
-                    '${_baby?.name ?? ""} · ${_babyAgeInMonths}个月',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
           ),
         ),
       ),
@@ -187,12 +170,121 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     );
   }
 
+  /// 宝宝信息卡片 - 现代育儿App风格
+  Widget _buildBabyInfoCard() {
+    return FadeInAnimation(
+      child: Container(
+        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 头像
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: _baby?.avatarPath != null
+                    ? ClipOval(
+                        child: Image.file(
+                          File(_baby!.avatarPath!),
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Text(
+                        _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // 信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _baby?.name ?? '',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_babyAgeInMonths}个月',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_baby?.gender}宝 · ${_baby?.ageDisplay ?? ''}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildProgressSection() {
     final overallProgress = _getOverallProgress();
 
     return FadeInAnimation(
+      delay: const Duration(milliseconds: 100),
       child: Container(
-        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
         padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
@@ -271,9 +363,9 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     final categoryProgress = _getCategoryProgress();
 
     return FadeInAnimation(
-      delay: const Duration(milliseconds: 100),
+      delay: const Duration(milliseconds: 200),
       child: AnimatedCard(
-        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -348,9 +440,9 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     }
 
     return FadeInAnimation(
-      delay: const Duration(milliseconds: 200),
+      delay: const Duration(milliseconds: 300),
       child: AnimatedCard(
-        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
+        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,7 +514,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     final recentCompleted = _completedRecords.take(3).toList();
 
     return FadeInAnimation(
-      delay: const Duration(milliseconds: 300),
+      delay: const Duration(milliseconds: 400),
       child: AnimatedCard(
         margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
         child: Column(
@@ -474,6 +566,17 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                     _formatDate(record.completedDate),
                     style: AppTextStyles.caption,
                   ),
+                  trailing: record.photoPath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.file(
+                            File(record.photoPath!),
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : null,
                 );
               }),
           ],

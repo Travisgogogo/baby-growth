@@ -6,6 +6,7 @@ class Baby {
    final double? birthWeight;
    final double? birthHeight;
    final double? birthHeadCircumference;
+   final String? avatarPath; // 宝宝头像路径
 
    Baby({
      this.id,
@@ -15,6 +16,7 @@ class Baby {
      this.birthWeight,
      this.birthHeight,
      this.birthHeadCircumference,
+     this.avatarPath,
    });
 
    Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class Baby {
        'birthWeight': birthWeight,
        'birthHeight': birthHeight,
        'birthHeadCircumference': birthHeadCircumference,
+       'avatarPath': avatarPath,
      };
    }
 
@@ -38,6 +41,7 @@ class Baby {
        birthWeight: map['birthWeight'],
        birthHeight: map['birthHeight'],
        birthHeadCircumference: map['birthHeadCircumference'],
+       avatarPath: map['avatarPath'],
      );
    }
 
@@ -72,6 +76,7 @@ class Baby {
      double? birthWeight,
      double? birthHeight,
      double? birthHeadCircumference,
+     String? avatarPath,
    }) {
      return Baby(
        id: id ?? this.id,
@@ -81,6 +86,7 @@ class Baby {
        birthWeight: birthWeight ?? this.birthWeight,
        birthHeight: birthHeight ?? this.birthHeight,
        birthHeadCircumference: birthHeadCircumference ?? this.birthHeadCircumference,
+       avatarPath: avatarPath ?? this.avatarPath,
      );
    }
  }

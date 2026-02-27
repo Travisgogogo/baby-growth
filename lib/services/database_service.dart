@@ -31,7 +31,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -46,7 +46,8 @@ class DatabaseService {
         gender TEXT NOT NULL,
         birthWeight REAL,
         birthHeight REAL,
-        birthHeadCircumference REAL
+        birthHeadCircumference REAL,
+        avatarPath TEXT
       )
     ''');
 
@@ -213,6 +214,11 @@ class DatabaseService {
           FOREIGN KEY (babyId) REFERENCES babies (id)
         )
       ''');
+    }
+    
+    if (oldVersion < 3) {
+      // 添加宝宝头像字段
+      await db.execute('ALTER TABLE babies ADD COLUMN avatarPath TEXT');
     }
   }
 

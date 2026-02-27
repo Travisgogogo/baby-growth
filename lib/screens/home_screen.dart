@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../constants/who_growth_data.dart';
@@ -30,6 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Baby? _baby;
   GrowthRecord? _latestGrowth;
   List<FeedRecord> _recentFeeds = [];
+  List<SleepRecord> _recentSleeps = [];
+  List<DiaperRecord> _recentDiapers = [];
   List<MilestoneRecord> _milestoneRecords = [];
   int _currentIndex = 0;
   bool _isLoading = true;
@@ -59,6 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadBabyData(int babyId) async {
     final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
     final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
+    final sleepRecords = await DatabaseService.instance.getSleepRecords(babyId);
+    final diaperRecords = await DatabaseService.instance.getDiaperRecords(babyId);
     final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
 
     setState(() {
@@ -66,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _latestGrowth = growthRecords.first;
       }
       _recentFeeds = feedRecords;
+      _recentSleeps = sleepRecords;
+      _recentDiapers = diaperRecords;
       _milestoneRecords = milestoneRecords;
     });
   }
@@ -310,7 +317,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: const Center(child: Text('👶', style: TextStyle(fontSize: 22))),
+                child: ClipOval(
+                  child: _baby?.avatarPath != null
+                      ? Image.file(
+                          File(_baby!.avatarPath!),
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Text(
+                                _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
+                                style: const TextStyle(fontSize: 22),
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Text(
+                            _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -659,6 +688,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentRecords() {
+    // 合并所有记录并按时间排序
+    final allRecords = _getAllRecentRecords();
+
     return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
@@ -673,7 +705,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (_recentFeeds.isEmpty)
+          if (allRecords.isEmpty)
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -681,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            ..._recentFeeds.take(3).toList().asMap().entries.map(
+            ...allRecords.take(5).toList().asMap().entries.map(
               (entry) => ListItemAnimation(
                 index: entry.key,
                 child: _buildRecordItem(entry.value),
@@ -692,7 +724,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecordItem(FeedRecord feed) {
+  /// 获取所有类型的记录并按时间排序
+  List<RecordItem> _getAllRecentRecords() {
+    final List<RecordItem> records = [];
+    
+    // 添加喂奶记录
+    for (final feed in _recentFeeds) {
+      records.add(RecordItem(
+        type: RecordType.feed,
+        title: '${feed.typeDisplay} · ${feed.amountDisplay}',
+        time: feed.time,
+        icon: '🍼',
+        iconBgColor: Colors.orange.shade50,
+      ));
+    }
+    
+    // 添加睡眠记录
+    for (final sleep in _recentSleeps) {
+      final duration = sleep.endTime != null 
+          ? sleep.endTime!.difference(sleep.startTime).inMinutes 
+          : null;
+      records.add(RecordItem(
+        type: RecordType.sleep,
+        title: duration != null 
+            ? '睡眠 · ${duration ~/ 60}小时${duration % 60}分钟'
+            : '开始睡觉',
+        time: sleep.startTime,
+        icon: '😴',
+        iconBgColor: Colors.green.shade50,
+      ));
+    }
+    
+    // 添加换尿布记录
+    for (final diaper in _recentDiapers) {
+      records.add(RecordItem(
+        type: RecordType.diaper,
+        title: '换尿布 · ${diaper.type}',
+        time: diaper.time,
+        icon: '💩',
+        iconBgColor: Colors.yellow.shade50,
+      ));
+    }
+    
+    // 按时间倒序排序
+    records.sort((a, b) => b.time.compareTo(a.time));
+    
+    return records;
+  }
+
+  Widget _buildRecordItem(RecordItem record) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
@@ -706,19 +786,19 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: record.iconBgColor,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(child: Text('🍼', style: TextStyle(fontSize: 18))),
+            child: Center(child: Text(record.icon, style: const TextStyle(fontSize: 18))),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${feed.typeDisplay} · ${feed.amountDisplay}',
+                Text(record.title,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                Text('${_formatTime(feed.time)}',
+                Text('${_formatTime(record.time)}',
                     style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
               ],
             ),
@@ -1041,4 +1121,29 @@ class _ActionItem {
   final VoidCallback onTap;
 
   _ActionItem(this.label, this.icon, this.bgColor, this.onTap);
+}
+
+/// 记录类型枚举
+enum RecordType {
+  feed,
+  sleep,
+  diaper,
+  growth,
+}
+
+/// 统一的记录项类
+class RecordItem {
+  final RecordType type;
+  final String title;
+  final DateTime time;
+  final String icon;
+  final Color iconBgColor;
+
+  RecordItem({
+    required this.type,
+    required this.title,
+    required this.time,
+    required this.icon,
+    required this.iconBgColor,
+  });
 }
