@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 /// 百度语音识别服务
@@ -44,11 +43,10 @@ class BaiduVoiceService {
     }
   }
   
-  /// 识别音频文件
-  /// [audioFile]: 音频文件 (支持 wav, m4a, amr 等格式)
+  /// 识别音频文件 - 使用 RAW 方式上传
   Future<List<String?>> recognize(File audioFile) async {
     try {
-      // 检查文件是否存在和大小
+      // 检查文件
       if (!await audioFile.exists()) {
         return [null, '音频文件不存在'];
       }
@@ -68,26 +66,23 @@ class BaiduVoiceService {
       
       // 读取音频文件
       final bytes = await audioFile.readAsBytes();
-      final base64Audio = base64Encode(bytes);
       
-      // 根据文件扩展名判断格式
+      // 判断格式
       final fileName = audioFile.path.toLowerCase();
-      String format;
+      String contentType;
       if (fileName.endsWith('.wav')) {
-        format = 'wav';
-      } else if (fileName.endsWith('.m4a') || fileName.endsWith('.mp4')) {
-        format = 'm4a';
+        contentType = 'audio/wav;rate=16000';
+      } else if (fileName.endsWith('.m4a')) {
+        contentType = 'audio/m4a;rate=16000';
       } else if (fileName.endsWith('.amr')) {
-        format = 'amr';
-      } else if (fileName.endsWith('.pcm')) {
-        format = 'pcm';
+        contentType = 'audio/amr;rate=16000';
       } else {
-        format = 'm4a';
+        contentType = 'audio/pcm;rate=16000';
       }
       
-      print('音频格式: $format, 大小: ${bytes.length} 字节');
+      print('使用 RAW 方式上传，Content-Type: $contentType');
       
-      // 发送识别请求
+      // 使用 RAW 方式上传 - 参数放在 URL 中
       final response = await http.post(
         Uri.parse(
           'https://vop.baidu.com/server_api'
@@ -95,18 +90,13 @@ class BaiduVoiceService {
           '&cuid=flutter_app'
           '&token=$token'
         ),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'format': format,
-          'rate': 16000,
-          'channel': 1,
-          'cuid': 'flutter_app',
-          'token': token,
-          'speech': base64Audio,
-          'len': bytes.length,
-        }),
+        headers: {
+          'Content-Type': contentType,
+        },
+        body: bytes,  // 直接发送二进制数据
       );
       
+      print('响应状态码: ${response.statusCode}');
       final result = jsonDecode(response.body);
       print('百度语音识别结果: $result');
       
@@ -120,10 +110,44 @@ class BaiduVoiceService {
         }
       } else {
         final errMsg = result['err_msg'] ?? '未知错误';
-        return [null, '识别失败: $errMsg'];
+        final errNo = result['err_no'];
+        print('识别错误: $errMsg (错误码: $errNo)');
+        
+        // 根据错误码返回友好提示
+        String userError;
+        switch (errNo) {
+          case 3300:
+            userError = '音频格式错误';
+            break;
+          case 3301:
+            userError = '音频质量不佳，请说话更清晰';
+            break;
+          case 3302:
+            userError = '授权验证失败';
+            break;
+          case 3303:
+            userError = '请求过于频繁，请稍后再试';
+            break;
+          case 3304:
+            userError = '音频文件过大';
+            break;
+          case 3305:
+            userError = '音频时长过长';
+            break;
+          case 3307:
+            userError = '未检测到语音，请说话声音大一些';
+            break;
+          case 3308:
+            userError = '音频文件为空';
+            break;
+          default:
+            userError = '识别失败: $errMsg';
+        }
+        return [null, userError];
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('语音识别错误: $e');
+      print('堆栈: $stackTrace');
       return [null, '识别出错: $e'];
     }
   }
