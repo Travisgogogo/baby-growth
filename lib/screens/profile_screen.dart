@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/app_theme.dart';
 import '../widgets/animations.dart';
 import 'dart:convert';
@@ -498,8 +499,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
-          Center(
-            child: Text('宝宝成长记 v1.0.0', style: AppTextStyles.caption),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final version = snapshot.hasData ? snapshot.data!.version : '1.0.0';
+              return Center(
+                child: Text('宝宝成长记 v$version', style: AppTextStyles.caption),
+              );
+            },
           ),
           const SizedBox(height: 32),
         ],
