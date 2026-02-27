@@ -50,20 +50,21 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
   Future<void> _startRecording() async {
     if (_isProcessing || _recorder == null || !_isRecorderReady) {
-      print('录音器未准备好: _isRecorderReady=$_isRecorderReady');
+      print('录音器未准备好');
       return;
     }
 
     try {
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioPath = '${tempDir.path}/voice_record_$timestamp.aac';
+      // 使用 m4a 格式，百度 API 支持
+      _audioPath = '${tempDir.path}/voice_record_$timestamp.m4a';
 
       print('开始录音: $_audioPath');
       
       await _recorder!.startRecorder(
         toFile: _audioPath,
-        codec: Codec.aacADTS,
+        codec: Codec.aacMP4,  // m4a 格式，百度支持
         sampleRate: 16000,
         numChannels: 1,
       );
