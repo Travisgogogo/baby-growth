@@ -25,6 +25,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
   bool _isRecorderReady = false;
   FlutterSoundRecorder? _recorder;
   String? _audioPath;
+  DateTime? _recordStartTime;
 
   @override
   void initState() {
@@ -34,50 +35,88 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
   Future<void> _initRecorder() async {
     try {
+      print('初始化录音器...');
       _recorder = FlutterSoundRecorder();
-      final status = await Permission.microphone.request();
-      if (status != PermissionStatus.granted) {
+      
+      // 请求录音权限
+      final micStatus = await Permission.microphone.request();
+      print('麦克风权限: $micStatus');
+      
+      if (micStatus != PermissionStatus.granted) {
         print('麦克风权限被拒绝');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🎤 需要麦克风权限')),
+          );
+        }
         return;
       }
+
+      // 请求存储权限
+      if (Platform.isAndroid) {
+        final storageStatus = await Permission.storage.request();
+        print('存储权限: $storageStatus');
+      }
+      
+      // 打开录音器
       await _recorder!.openRecorder();
       _isRecorderReady = true;
       print('录音器初始化成功');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('录音器初始化失败: $e');
+      print('堆栈: $stackTrace');
     }
   }
 
   Future<void> _startRecording() async {
     if (_isProcessing || _recorder == null || !_isRecorderReady) {
-      print('录音器未准备好');
+      print('录音器未准备好: _isRecorderReady=$_isRecorderReady');
+      if (!_isRecorderReady) {
+        // 尝试重新初始化
+        await _initRecorder();
+      }
       return;
     }
 
     try {
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      // 使用 WAV 格式，百度 API 最稳定支持
-      _audioPath = '${tempDir.path}/voice_record_$timestamp.wav';
+      // 使用 m4a 格式，百度 API 支持
+      _audioPath = '${tempDir.path}/voice_record_$timestamp.m4a';
 
       print('开始录音: $_audioPath');
+      print('录音参数: codec=aacMP4, sampleRate=16000, numChannels=1');
       
       await _recorder!.startRecorder(
         toFile: _audioPath,
-        codec: Codec.pcm16WAV,
+        codec: Codec.aacMP4,
         sampleRate: 16000,
         numChannels: 1,
+        bitRate: 48000,  // 百度推荐 48000
       );
       
+      _recordStartTime = DateTime.now();
       print('录音已启动');
       setState(() => _isRecording = true);
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('开始录音错误: $e');
+      print('堆栈: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('🎤 录音启动失败: $e')),
+        );
+      }
     }
   }
 
   Future<void> _stopRecording() async {
     if (!_isRecording || _recorder == null) return;
+
+    // 计算录音时长
+    final recordDuration = _recordStartTime != null 
+        ? DateTime.now().difference(_recordStartTime!).inMilliseconds 
+        : 0;
+    print('录音时长: $recordDuration ms');
 
     setState(() {
       _isRecording = false;
@@ -86,16 +125,21 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
 
     try {
       print('停止录音...');
-      await _recorder!.stopRecorder();
+      final recordedPath = await _recorder!.stopRecorder();
+      print('录音已停止，返回路径: $recordedPath');
       
       if (_audioPath != null) {
         final audioFile = File(_audioPath!);
-        await Future.delayed(const Duration(milliseconds: 500));
         
-        final fileSize = await audioFile.length();
-        print('文件大小: $fileSize 字节');
+        // 等待文件写入完成
+        await Future.delayed(const Duration(milliseconds: 800));
         
-        if (fileSize > 100) {
+        final fileExists = await audioFile.exists();
+        final fileSize = fileExists ? await audioFile.length() : 0;
+        print('文件存在: $fileExists, 文件大小: $fileSize 字节');
+        
+        if (fileExists && fileSize > 1000) {
+          print('调用百度语音识别...');
           final baiduService = BaiduVoiceService();
           final result = await baiduService.recognize(audioFile);
           final recognizedText = result[0];
@@ -115,15 +159,28 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
           }
           await audioFile.delete();
         } else {
+          print('录音文件太小: $fileSize 字节');
           if (mounted) {
+            String errorMsg = '录音时间太短';
+            if (fileSize == 0) {
+              errorMsg = '录音失败，请检查麦克风权限';
+            } else if (recordDuration < 500) {
+              errorMsg = '录音时间太短，请长按至少1秒';
+            }
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('🎤 录音时间太短')),
+              SnackBar(content: Text('🎤 $errorMsg')),
             );
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('停止录音错误: $e');
+      print('堆栈: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('🎤 语音识别失败: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
