@@ -62,15 +62,95 @@ jobs:
         echo "=== android/app/build.gradle ==="
         cat android/app/build.gradle
         
-        # Disable R8/minify in build.gradle to fix sealed classes issue with record_android plugin
-        echo "Disabling R8/minify in build.gradle..."
+        # Completely disable R8 by using ProGuard instead
+        # This fixes the sealed classes issue with record_android plugin
+        echo "Disabling R8, using ProGuard instead..."
         sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
         sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
-        # Ensure minifyEnabled is set to false in release build type
-        sed -i '/buildTypes {/,/}/ { s/minifyEnabled .*/minifyEnabled false/ }' android/app/build.gradle
+        
+        # Add android.enableR8=false to gradle.properties to completely disable R8
+        echo "android.enableR8=false" >> android/gradle.properties
+        echo "android.useAndroidX=true" >> android/gradle.properties
+        
+        # Ensure release build type doesn't use R8
+        cat > android/app/build.gradle.tmp << 'EOF'
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withReader('UTF-8') { reader ->
+                localProperties.load(reader)
+            }
+        }
+        
+        def flutterRoot = localProperties.getProperty('flutter.sdk')
+        if (flutterRoot == null) {
+            throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+        }
+        
+        def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+        if (flutterVersionCode == null) {
+            flutterVersionCode = '1'
+        }
+        
+        def flutterVersionName = localProperties.getProperty('flutter.versionName')
+        if (flutterVersionName == null) {
+            flutterVersionName = '1.0'
+        }
+        
+        apply plugin: 'com.android.application'
+        apply plugin: 'kotlin-android'
+        apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+        
+        android {
+            namespace "com.example.myapp"
+            compileSdk 34
+            ndkVersion "27.0.12077973"
+        
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        
+            kotlinOptions {
+                jvmTarget = JavaVersion.VERSION_17.toString()
+            }
+        
+            sourceSets {
+                main.java.srcDirs += 'src/main/kotlin'
+            }
+        
+            defaultConfig {
+                applicationId "com.example.myapp"
+                minSdk 24
+                targetSdk 34
+                versionCode flutterVersionCode.toInteger()
+                versionName flutterVersionName
+            }
+        
+            buildTypes {
+                release {
+                    // Disable R8 completely to fix sealed classes issue
+                    minifyEnabled false
+                    shrinkResources false
+                    signingConfig signingConfigs.debug
+                }
+            }
+        }
+        
+        flutter {
+            source '../..'
+        }
+        
+        dependencies {}
+        EOF
+        cp android/app/build.gradle.tmp android/app/build.gradle
+        rm android/app/build.gradle.tmp
         
         echo "=== Updated android/app/build.gradle ==="
         cat android/app/build.gradle
+        
+        echo "=== gradle.properties ==="
+        cat android/gradle.properties
         
         flutter pub get
         
@@ -98,9 +178,8 @@ jobs:
           fi
         done
         
-        # Build with --no-shrink to avoid R8 sealed classes issue with record_android plugin
-        # The plugin uses Kotlin sealed classes which R8 doesn't support as program classes
-        flutter build apk --release --no-shrink
+        # Build without R8 - use ProGuard instead (disabled above)
+        flutter build apk --release
         
         cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/
     
