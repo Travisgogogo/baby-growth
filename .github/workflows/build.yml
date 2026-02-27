@@ -68,8 +68,8 @@ jobs:
         sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
         sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
         
-        # Add android.enableR8=false to gradle.properties to completely disable R8
-        echo "android.enableR8=false" >> android/gradle.properties
+        # Note: android.enableR8=false was removed in Android Gradle Plugin 7.0
+        # We only use minifyEnabled false and shrinkResources false to disable R8
         echo "android.useAndroidX=true" >> android/gradle.properties
         
         # Ensure release build type doesn't use R8
