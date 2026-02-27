@@ -16,6 +16,11 @@ dependencies:
   fl_chart: ^0.65.0
   shared_preferences: ^2.2.2
   image_picker: ^1.0.7
+  
+  # 应用内更新
+  package_info_plus: ^5.0.1
+  open_file: ^3.3.2
+  permission_handler: ^11.3.0
 
 dev_dependencies:
   flutter_test:

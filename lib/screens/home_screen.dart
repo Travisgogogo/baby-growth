@@ -11,7 +11,7 @@ import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
-import '../services/nlp_parser.dart';
+import '../services/update_service.dart';
 import '../widgets/voice_record_button.dart';
 import 'growth_chart_screen.dart';
 import 'growth_chart_detail_screen.dart';
@@ -41,6 +41,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
+    // Android 检查更新
+    if (Platform.isAndroid) {
+      _checkUpdate();
+    }
+  }
+
+  Future<void> _checkUpdate() async {
+    // 延迟检查，避免启动时卡顿
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    final updateInfo = await UpdateService.checkUpdate();
+    if (updateInfo != null && updateInfo.hasUpdate && mounted) {
+      UpdateDialog.show(context, updateInfo);
+    }
   }
 
   Future<void> _loadData() async {
