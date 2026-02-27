@@ -1,14 +1,18 @@
-name: Build APK and iOS
+name: Build and Release APK
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
@@ -33,32 +37,34 @@ jobs:
         wget -O assets/models/paraformer-zh-tiny.onnx \
           "https://huggingface.co/csukuangfj/sherpa-onnx-paraformer-zh-2023-09-14/resolve/main/model.onnx"
     
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
     - name: Build APK
       run: |
-        # Show configuration for debugging
-        echo "=== android/app/build.gradle ==="
-        cat android/app/build.gradle
-        
-        echo "=== android/settings.gradle ==="
-        cat android/settings.gradle
-        
         flutter pub get
-        
-        # Clean gradle cache to avoid record_android plugin issues
-        cd android
-        ./gradlew clean || true
-        rm -rf ~/.gradle/caches/
-        cd ..
-        
-        # Build APK - no flutter create needed, project structure is in repo
         flutter build apk --release
     
-    - name: Upload APK
+    - name: Upload APK to Artifact
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
         path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: build/app/outputs/flutter-apk/app-release.apk
+        name: "宝宝成长记 v${{ steps.version.outputs.version }}"
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-ios:
     runs-on: macos-latest
@@ -83,19 +89,12 @@ jobs:
     
     - name: Build iOS
       run: |
-        # Backup pubspec.yaml before flutter create
         cp pubspec.yaml pubspec.yaml.bak
-        
-        # Create iOS project structure (not included in repo)
         flutter create --platforms=ios . --project-name baby_growth
-        
-        # Restore pubspec.yaml with our dependencies
         cp pubspec.yaml.bak pubspec.yaml
         rm pubspec.yaml.bak
-        
         flutter pub get
         flutter build ios --simulator
-        
         echo "iOS simulator build completed successfully"
     
     - name: Upload iOS
