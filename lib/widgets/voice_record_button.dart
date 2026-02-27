@@ -57,14 +57,14 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
     try {
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      // 使用 m4a 格式，百度 API 支持
-      _audioPath = '${tempDir.path}/voice_record_$timestamp.m4a';
+      // 使用 WAV 格式，百度 API 最稳定支持
+      _audioPath = '${tempDir.path}/voice_record_$timestamp.wav';
 
       print('开始录音: $_audioPath');
       
       await _recorder!.startRecorder(
         toFile: _audioPath,
-        codec: Codec.aacMP4,  // m4a 格式，百度支持
+        codec: Codec.pcm16WAV,
         sampleRate: 16000,
         numChannels: 1,
       );
