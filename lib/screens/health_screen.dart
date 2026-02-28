@@ -635,11 +635,18 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   description: descController.text,
                   treatment: treatmentController.text,
                   startTime: startTime,
-                  endTime: endTime,
+                  endTime: endTime,  // 这个值可能为 null（进行中状态）
                 );
-                await DatabaseService.instance.updateIllnessRecord(updated);
+                print('更新疾病记录: id=${updated.id}, endTime=${updated.endTime}'); // 调试
+                final result = await DatabaseService.instance.updateIllnessRecord(updated);
+                print('更新结果: $result'); // 调试
                 Navigator.pop(context);
                 await _loadData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(result ? '保存成功' : '保存失败')),
+                  );
+                }
               },
               child: const Text('保存'),
             ),
