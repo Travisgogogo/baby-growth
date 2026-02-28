@@ -424,14 +424,33 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                           vertical: 8,
                         ),
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.secondary,
-                          child: const Icon(Icons.bedtime, color: Colors.white),
+                          backgroundColor: record.endTime == null ? AppColors.accent : AppColors.secondary,
+                          child: Icon(
+                            record.endTime == null ? Icons.bedtime : Icons.bedtime_outlined,
+                            color: Colors.white,
+                          ),
                         ),
                         title: Text(
                           duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中',
                           style: AppTextStyles.body,
                         ),
-                        subtitle: Text(_formatTime(record.startTime), style: AppTextStyles.caption),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${_formatTime(record.startTime)} - ${record.endTime != null ? _formatTime(record.endTime!) : '进行中'}',
+                              style: AppTextStyles.caption,
+                            ),
+                            if (duration != null)
+                              Text(
+                                '总时长: ${duration ~/ 60}小时${duration % 60}分钟',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

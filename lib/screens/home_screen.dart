@@ -440,19 +440,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActions() {
+    // 检查是否有未结束的睡眠记录
+    final hasOngoingSleep = _recentSleeps.isNotEmpty && _recentSleeps.first.endTime == null;
+    
     final actions = [
       _ActionItem('喂奶', '🍼', Colors.orange.shade50, () => _showFeedDialog()),
-      _ActionItem('睡眠', '😴', Colors.green.shade50, () => _showSleepDialog()),
+      if (hasOngoingSleep)
+        _ActionItem('醒来', '☀️', Colors.green.shade100, () => _showWakeUpDialog())
+      else
+        _ActionItem('睡觉', '😴', Colors.green.shade50, () => _showSleepDialog()),
       _ActionItem('换尿布', '💩', Colors.yellow.shade50, () => _showDiaperDialog()),
       _ActionItem('量身高', '📏', Colors.blue.shade50, () => _showGrowthDialog()),
     ];
 
     return Container(
-      margin: const EdgeInsets.all(10),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -460,13 +466,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: actions.map((action) => _buildActionButton(action)).toList(),
-          ),
-        ],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: actions.map((action) => _buildActionButton(action)).toList(),
       ),
     );
   }
@@ -902,6 +904,60 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             child: const Text('开始睡眠'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWakeUpDialog() {
+    final ongoingSleep = _recentSleeps.first;
+    final startTime = ongoingSleep.startTime;
+    final duration = DateTime.now().difference(startTime);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('☀️ 记录醒来'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('宝宝睡了 ${hours}小时${minutes}分钟'),
+            const SizedBox(height: 8),
+            Text(
+              '入睡时间: ${_formatTime(startTime)}',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (_baby != null && ongoingSleep.id != null) {
+                final babyId = _baby!.id;
+                if (babyId == null) return;
+                
+                final updatedRecord = ongoingSleep.copyWith(
+                  endTime: DateTime.now(),
+                );
+                await DatabaseService.instance.updateSleepRecord(updatedRecord);
+                await _loadBabyData(babyId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('醒来记录已保存，共睡${hours}小时${minutes}分钟')),
+                  );
+                }
+              }
+            },
+            child: const Text('记录醒来'),
           ),
         ],
       ),

@@ -425,6 +425,22 @@ class DatabaseService {
     }
   }
 
+  Future<bool> updateSleepRecord(SleepRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'sleep_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新睡眠记录失败: $e');
+      return false;
+    }
+  }
+
   Future<List<SleepRecord>> getSleepRecords(int babyId) async {
     try {
       final db = await database;
