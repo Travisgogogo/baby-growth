@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
 
 /// 坚果云 WebDAV 服务
 class NutstoreService {
