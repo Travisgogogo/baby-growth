@@ -7,6 +7,7 @@ import '../widgets/animations.dart';
 import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
+import 'share_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -487,7 +488,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 250),
-            child: _buildMenuItem(Icons.share, '分享成长', () {}),
+            child: _buildMenuItem(Icons.share, '分享成长', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShareScreen()),
+              );
+            }),
           ),
           const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(

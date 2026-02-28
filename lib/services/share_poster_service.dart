@@ -28,7 +28,10 @@ class SharePosterService {
       );
 
       // 渲染为图片
-      final image = await _widgetToImage(posterWidget);
+      final image = await _widgetToImage(
+        posterWidget,
+        size: const Size(1080, 1920),
+      );
       if (image == null) return null;
 
       // 保存到临时文件
@@ -58,7 +61,10 @@ class SharePosterService {
         endDate: endDate,
       );
 
-      final image = await _widgetToImage(posterWidget);
+      final image = await _widgetToImage(
+        posterWidget,
+        size: const Size(1080, 1920),
+      );
       if (image == null) return null;
 
       final tempDir = await getTemporaryDirectory();
@@ -73,20 +79,11 @@ class SharePosterService {
   }
 
   /// 将 Widget 转换为图片
-  static Future<Uint8List?> _widgetToImage(Widget widget) async {
+  static Future<Uint8List?> _widgetToImage(Widget widget, {required Size size}) async {
     final repaintBoundary = RenderRepaintBoundary();
     
-    // 使用 PlatformDispatcher 替代 window
-    final platformDispatcher = ui.PlatformDispatcher.instance;
-    final flutterView = platformDispatcher.views.first;
-    
-    // Flutter 3.x 兼容：ViewConfiguration 不再接受 size 参数
-    // 使用 physicalSize 和 devicePixelRatio 来计算逻辑尺寸
-    final physicalSize = flutterView.physicalSize;
-    final devicePixelRatio = flutterView.devicePixelRatio;
-    
     final renderView = RenderView(
-      view: flutterView,
+      view: ui.PlatformDispatcher.instance.views.first,
       child: RenderPositionedBox(
         alignment: Alignment.center,
         child: repaintBoundary,
@@ -98,11 +95,19 @@ class SharePosterService {
     renderView.prepareInitialFrame();
 
     final buildOwner = BuildOwner(focusManager: FocusManager());
+    
+    // 使用 SizedBox 给 widget 设置大小
+    final sizedWidget = SizedBox(
+      width: size.width,
+      height: size.height,
+      child: widget,
+    );
+    
     final element = RenderObjectToWidgetAdapter(
       container: repaintBoundary,
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: widget,
+        child: sizedWidget,
       ),
     ).attachToRenderTree(buildOwner);
 
