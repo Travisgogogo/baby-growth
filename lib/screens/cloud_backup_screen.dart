@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 import '../constants/app_theme.dart';
 import '../services/nutstore_service.dart';
 import '../services/database_service.dart';
@@ -18,6 +20,21 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isConnected = false;
+  String? _lastBackupTime;
+  List<String> _backupFiles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastBackupTime();
+  }
+
+  Future<void> _loadLastBackupTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _lastBackupTime = prefs.getString('last_backup_time');
+    });
+  }
 
   Future<void> _connect() async {
     if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -47,8 +64,9 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('连接成功')),
       );
+      // 连接成功后加载备份列表
+      await _loadBackupList();
     } else {
-      // 显示详细错误信息
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -80,14 +98,83 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
     }
   }
 
+  Future<void> _loadBackupList() async {
+    // TODO: 实现列出备份文件
+  }
+
   Future<void> _backup() async {
     setState(() => _isLoading = true);
-    // 备份逻辑
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('备份功能开发中')),
-    );
+    
+    try {
+      // 1. 导出所有数据
+      final backupData = await _exportAllData();
+      
+      // 2. 转换为 JSON
+      final jsonData = jsonEncode(backupData);
+      final bytes = utf8.encode(jsonData);
+      
+      // 3. 生成文件名（带时间戳）
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final fileName = 'baby-growth-backup-$timestamp.json';
+      
+      // 4. 上传到坚果云
+      final success = await nutstoreService.uploadFile(fileName, bytes);
+      
+      if (success) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_backup_time', DateTime.now().toIso8601String());
+        await _loadLastBackupTime();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('备份成功：$fileName')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('备份失败，请重试')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('备份出错：$e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  /// 导出所有数据
+  Future<Map<String, dynamic>> _exportAllData() async {
+    final db = await DatabaseService.instance.database;
+    
+    final babies = await db.query('babies');
+    final growthRecords = await db.query('growth_records');
+    final feedRecords = await db.query('feed_records');
+    final sleepRecords = await db.query('sleep_records');
+    final diaperRecords = await db.query('diaper_records');
+    final milestones = await db.query('milestones');
+    final photos = await db.query('photos');
+    final illnessRecords = await db.query('illness_records');
+    final vaccineRecords = await db.query('vaccine_records');
+    
+    return {
+      'version': 1,
+      'exportTime': DateTime.now().toIso8601String(),
+      'babies': babies,
+      'growth_records': growthRecords,
+      'feed_records': feedRecords,
+      'sleep_records': sleepRecords,
+      'diaper_records': diaperRecords,
+      'milestones': milestones,
+      'photos': photos,
+      'illness_records': illnessRecords,
+      'vaccine_records': vaccineRecords,
+    };
   }
 
   @override
@@ -101,7 +188,30 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_lastBackupTime != null) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '上次备份',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _lastBackupTime!.substring(0, 19).replaceAll('T', ' '),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             TextField(
               controller: _usernameController,
               decoration: const InputDecoration(
@@ -123,14 +233,23 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
             ElevatedButton(
               onPressed: _isLoading ? null : _connect,
               child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('连接'),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isConnected ? '重新连接' : '连接'),
             ),
             if (_isConnected) ...[
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _backup,
-                child: const Text('立即备份'),
+              ElevatedButton.icon(
+                onPressed: _isLoading ? null : _backup,
+                icon: const Icon(Icons.backup),
+                label: const Text('立即备份'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ],
