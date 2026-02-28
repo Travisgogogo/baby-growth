@@ -34,15 +34,23 @@ class NutstoreService {
     }
     
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/'),
-        headers: _getAuthHeaders(),
-      ).timeout(const Duration(seconds: 10));
+      // 坚果云 WebDAV 需要使用 PROPFIND 方法测试根目录
+      final client = http.Client();
+      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/'));
+      request.headers.addAll({
+        ..._getAuthHeaders(),
+        'Depth': '0',
+      });
+      
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
+      final response = await http.Response.fromStream(streamedResponse);
       
       if (response.statusCode == 207 || response.statusCode == 200) {
         return {'success': true, 'error': null};
       } else if (response.statusCode == 401) {
         return {'success': false, 'error': '认证失败：用户名或密码错误'};
+      } else if (response.statusCode == 403) {
+        return {'success': false, 'error': '403 禁止访问：请确认应用密码有 WebDAV 权限'};
       } else {
         return {'success': false, 'error': '服务器返回错误：${response.statusCode}'};
       }
