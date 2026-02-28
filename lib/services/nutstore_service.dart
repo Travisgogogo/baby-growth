@@ -60,13 +60,7 @@ class NutstoreService {
         return false;
       }
     } catch (e) {
-      if (e is async.TimeoutException) {
-        print('连接超时: $e');
-      } else if (e is SocketException) {
-        print('网络错误: $e');
-      } else {
-        print('连接测试失败: $e');
-      }
+      print('连接测试失败: $e');
       return false;
     }
   }
