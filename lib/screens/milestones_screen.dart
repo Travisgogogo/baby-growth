@@ -108,15 +108,14 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   }
 
   Future<void> _navigateToDetail(Milestone milestone) async {
-    final babyId = _baby?.id;
-    if (babyId == null) return;
+    if (_baby == null) return;
 
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => MilestoneDetailScreen(
           milestone: milestone,
-          babyId: babyId,
+          baby: _baby!,
           isCompleted: _isMilestoneCompleted(milestone.id),
         ),
       ),
