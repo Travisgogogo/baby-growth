@@ -34,7 +34,10 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
       _passwordController.text.trim(),
     );
     
-    final connected = await nutstoreService.testConnection();
+    final result = await nutstoreService.testConnectionWithDetails();
+    final connected = result['success'] as bool;
+    final error = result['error'] as String?;
+    
     setState(() {
       _isConnected = connected;
       _isLoading = false;
@@ -50,18 +53,20 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('连接失败'),
-          content: const Column(
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('请检查以下设置：'),
-              SizedBox(height: 8),
-              Text('1. 用户名是坚果云邮箱'),
-              Text('2. 密码是应用密码（非登录密码）'),
-              Text('3. 在坚果云网页版生成应用密码'),
-              SizedBox(height: 8),
-              Text('生成应用密码步骤：'),
-              Text('网页版 → 安全设置 → 第三方应用管理 → 添加应用密码'),
+              Text('错误信息：$error'),
+              const SizedBox(height: 16),
+              const Text('请检查以下设置：'),
+              const SizedBox(height: 8),
+              const Text('1. 用户名是坚果云邮箱'),
+              const Text('2. 密码是应用密码（非登录密码）'),
+              const Text('3. 在坚果云网页版生成应用密码'),
+              const SizedBox(height: 8),
+              const Text('生成应用密码步骤：'),
+              const Text('网页版 → 安全设置 → 第三方应用管理 → 添加应用密码'),
             ],
           ),
           actions: [

@@ -24,45 +24,41 @@ class NutstoreService {
     final auth = base64Encode(utf8.encode('$_username:$_password'));
     return {
       'Authorization': 'Basic $auth',
-      'Content-Type': 'application/xml',
     };
   }
   
-  /// 测试连接 - 使用简单的 GET 请求测试根目录
-  Future<bool> testConnection() async {
+  /// 测试连接 - 返回详细错误信息
+  Future<Map<String, dynamic>> testConnectionWithDetails() async {
     if (!isAuthenticated) {
-      print('未设置认证信息');
-      return false;
+      return {'success': false, 'error': '未设置认证信息'};
     }
     
-    print('测试连接: $_baseUrl/');
-    print('用户名: $_username');
-    
     try {
-      // 使用 http 包的 get 方法测试
       final response = await http.get(
         Uri.parse('$_baseUrl/'),
         headers: _getAuthHeaders(),
       ).timeout(const Duration(seconds: 10));
       
-      print('响应状态码: ${response.statusCode}');
-      
-      // 207 是 WebDAV 成功状态码，401 是认证失败
       if (response.statusCode == 207 || response.statusCode == 200) {
-        print('连接成功');
-        return true;
+        return {'success': true, 'error': null};
       } else if (response.statusCode == 401) {
-        print('认证失败: 用户名或密码错误');
-        return false;
+        return {'success': false, 'error': '认证失败：用户名或密码错误'};
       } else {
-        print('连接失败: ${response.statusCode}');
-        print('响应: ${response.body}');
-        return false;
+        return {'success': false, 'error': '服务器返回错误：${response.statusCode}'};
       }
+    } on SocketException catch (e) {
+      return {'success': false, 'error': '网络连接失败，请检查网络权限'};
+    } on FormatException catch (e) {
+      return {'success': false, 'error': '响应格式错误：$e'};
     } catch (e) {
-      print('连接测试失败: $e');
-      return false;
+      return {'success': false, 'error': '连接失败：$e'};
     }
+  }
+  
+  /// 测试连接（兼容旧接口）
+  Future<bool> testConnection() async {
+    final result = await testConnectionWithDetails();
+    return result['success'] as bool;
   }
   
   /// 上传文件
