@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 import '../widgets/animations.dart';
+import '../widgets/sleep_chart.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -384,51 +385,88 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-      itemCount: _sleepRecords.length,
-      itemBuilder: (context, index) {
-        final record = _sleepRecords[index];
-        final duration = record.endTime != null 
-            ? record.endTime!.difference(record.startTime).inMinutes 
-            : null;
-        return ListItemAnimation(
-          index: index,
-          child: AnimatedCard(
-            margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
-            padding: EdgeInsets.zero,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-              child: Dismissible(
-                key: Key('sleep_${record.id}'),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: AppColors.error,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
-                  child: const Icon(Icons.delete, color: Colors.white),
+    return Column(
+      children: [
+        _buildSleepChartToggle(),
+        SleepChart(
+          sleepRecords: _sleepRecords,
+          days: _sleepChartDays,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+            itemCount: _sleepRecords.length,
+            itemBuilder: (context, index) {
+              final record = _sleepRecords[index];
+              final duration = record.endTime != null
+                  ? record.endTime!.difference(record.startTime).inMinutes
+                  : null;
+              return ListItemAnimation(
+                index: index,
+                child: AnimatedCard(
+                  margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+                  padding: EdgeInsets.zero,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                    child: Dismissible(
+                      key: Key('sleep_${record.id}'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        color: AppColors.error,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: AppDimensions.paddingMedium),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (_) => _deleteSleepRecord(record.id!),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.paddingMedium,
+                          vertical: 8,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: AppColors.secondary,
+                          child: const Icon(Icons.bedtime, color: Colors.white),
+                        ),
+                        title: Text(
+                          duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中',
+                          style: AppTextStyles.body,
+                        ),
+                        subtitle: Text(_formatTime(record.startTime), style: AppTextStyles.caption),
+                      ),
+                    ),
+                  ),
                 ),
-                onDismissed: (_) => _deleteSleepRecord(record.id!),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingMedium,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.secondary,
-                    child: const Icon(Icons.bedtime, color: Colors.white),
-                  ),
-                  title: Text(
-                    duration != null ? '睡眠 ${duration ~/ 60}小时${duration % 60}分钟' : '睡眠中',
-                    style: AppTextStyles.body,
-                  ),
-                  subtitle: Text(_formatTime(record.startTime), style: AppTextStyles.caption),
-                ),
-              ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  int _sleepChartDays = 7; // 默认显示7天
+
+  Widget _buildSleepChartToggle() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 7, label: Text('近7天')),
+                ButtonSegment(value: 30, label: Text('近30天')),
+              ],
+              selected: {_sleepChartDays},
+              onSelectionChanged: (set) {
+                setState(() {
+                  _sleepChartDays = set.first;
+                });
+              },
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
