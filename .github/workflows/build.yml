@@ -78,23 +78,13 @@ jobs:
     
     - name: Setup Signing
       run: |
-        # Generate JKS keystore directly using Java keytool
-        keytool -genkey \
-          -v \
-          -keystore android/app/keystore.jks \
-          -alias babygrowth \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -storepass babygrowth2024 \
-          -keypass babygrowth2024 \
-          -dname "CN=Baby Growth, OU=Dev, O=BabyGrowth, L=Beijing, ST=Beijing, C=CN"
-        
+        # Create keystore from base64 secret
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
         # Create key.properties
         cat > android/key.properties << EOF
-        storePassword=babygrowth2024
-        keyPassword=babygrowth2024
-        keyAlias=babygrowth
+        storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+        keyPassword=${{ secrets.KEY_PASSWORD }}
+        keyAlias=${{ secrets.KEY_ALIAS }}
         storeFile=keystore.jks
         EOF
     
