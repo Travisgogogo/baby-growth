@@ -76,6 +76,18 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
     
+    - name: Setup Signing
+      run: |
+        # Create keystore from base64 secret
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.p12
+        # Create key.properties
+        cat > android/key.properties << EOF
+        storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+        keyPassword=${{ secrets.KEY_PASSWORD }}
+        keyAlias=${{ secrets.KEY_ALIAS }}
+        storeFile=keystore.p12
+        EOF
+    
     - name: Build APK
       run: |
         flutter pub get
