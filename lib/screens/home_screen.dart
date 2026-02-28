@@ -18,6 +18,7 @@ import 'records_screen.dart';
 import 'milestones_screen.dart';
 import 'profile_screen.dart';
 import 'health_screen.dart';
+import 'share_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -117,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const RecordsScreen(),
       const MilestonesScreen(),
       const HealthScreen(),
+      const ShareScreen(),
       const ProfileScreen(),
     ];
 
@@ -140,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: '记录'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: '里程碑'),
           BottomNavigationBarItem(icon: Icon(Icons.health_and_safety), label: '健康'),
+          BottomNavigationBarItem(icon: Icon(Icons.share), label: '分享'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
       ),
