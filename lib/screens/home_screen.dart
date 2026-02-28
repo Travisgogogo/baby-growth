@@ -439,11 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Container(
-      margin: const EdgeInsets.all(10),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -451,13 +451,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: actions.map((action) => _buildActionButton(action)).toList(),
-          ),
-        ],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: actions.map((action) => _buildActionButton(action)).toList(),
       ),
     );
   }
@@ -527,7 +523,8 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -552,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             Container(
-              padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -610,7 +607,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -737,7 +735,8 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const MilestonesScreen()),
       ),
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
