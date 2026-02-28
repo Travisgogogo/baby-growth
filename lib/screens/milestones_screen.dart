@@ -6,9 +6,9 @@ import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
-import 'milestones_list_screen.dart';
+import 'milestone_detail_screen.dart';
 
-/// 里程碑页面 - 概览入口
+/// 里程碑页面 - 整合概览和列表
 class MilestonesScreen extends StatefulWidget {
   const MilestonesScreen({super.key});
 
@@ -21,6 +21,10 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   List<MilestoneRecord> _completedRecords = [];
   bool _isLoading = true;
   int _babyAgeInMonths = 0;
+
+  // 筛选状态
+  bool _showCurrentAgeOnly = false;
+  MilestoneCategory? _selectedCategory;
 
   @override
   void initState() {
@@ -49,27 +53,52 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     setState(() => _isLoading = false);
   }
 
+  /// 检查里程碑是否已完成
+  bool _isMilestoneCompleted(String milestoneId) {
+    return _completedRecords.any((r) => r.milestoneId == milestoneId);
+  }
+
+  /// 获取筛选后的里程碑列表
+  List<Milestone> _getFilteredMilestones() {
+    List<Milestone> result = List.from(MilestoneData.allMilestones);
+
+    // 按分类筛选
+    if (_selectedCategory != null) {
+      result = result.where((m) => m.category == _selectedCategory).toList();
+    }
+
+    // 按当前月龄筛选
+    if (_showCurrentAgeOnly) {
+      result = result.where((m) => m.isInRange(_babyAgeInMonths)).toList();
+    }
+
+    // 按最小月龄排序
+    result.sort((a, b) => a.minMonth.compareTo(b.minMonth));
+
+    return result;
+  }
+
   /// 计算总体进度
   double _getOverallProgress() {
-    if (DefaultMilestones.totalCount == 0) return 0;
-    return _completedRecords.length / DefaultMilestones.totalCount;
+    if (MilestoneData.totalCount == 0) return 0;
+    return _completedRecords.length / MilestoneData.totalCount;
   }
 
   /// 计算各分类进度
   Map<MilestoneCategory, double> _getCategoryProgress() {
     final result = <MilestoneCategory, double>{};
-    final countByCategory = DefaultMilestones.countByCategory;
+    final categoryCounts = MilestoneData.categoryCounts;
 
     for (final category in MilestoneCategory.values) {
-      final totalInCategory = countByCategory[category] ?? 0;
+      final totalInCategory = categoryCounts[category] ?? 0;
       if (totalInCategory == 0) {
         result[category] = 0;
         continue;
       }
 
       final completedInCategory = _completedRecords.where((r) {
-        final def = DefaultMilestones.getMilestoneById(r.milestoneId);
-        return def?.category == category;
+        final milestone = MilestoneData.getById(r.milestoneId);
+        return milestone?.category == category;
       }).length;
 
       result[category] = completedInCategory / totalInCategory;
@@ -78,22 +107,20 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     return result;
   }
 
-  /// 获取当前月龄应关注的里程碑
-  List<Milestone> _getCurrentMilestones() {
-    return DefaultMilestones.getMilestonesForAge(_babyAgeInMonths)
-        .where((m) => !_completedRecords.any((r) => r.milestoneId == m.id))
-        .take(3)
-        .toList();
-  }
+  Future<void> _navigateToDetail(Milestone milestone) async {
+    final babyId = _baby?.id;
+    if (babyId == null) return;
 
-  Future<void> _navigateToList() async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const MilestonesListScreen(),
+        builder: (context) => MilestoneDetailScreen(
+          milestone: milestone,
+          babyId: babyId,
+          isCompleted: _isMilestoneCompleted(milestone.id),
+        ),
       ),
     );
-    // 返回后刷新数据
     _loadData();
   }
 
@@ -101,33 +128,23 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('发育里程碑'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: _navigateToList,
-            tooltip: '查看全部',
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _baby == null
               ? _buildEmptyState()
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProgressSection(),
-                      _buildCategoryProgressSection(),
-                      _buildCurrentMilestonesSection(),
-                      _buildQuickStatsSection(),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+              : CustomScrollView(
+                  slivers: [
+                    _buildSliverAppBar(),
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _buildProgressSection(),
+                          _buildFilterSection(),
+                          _buildMilestonesList(),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
@@ -148,13 +165,55 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     );
   }
 
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      pinned: true,
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          '${_baby?.name ?? ""}的里程碑',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: AppColors.primaryGradient,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(),
+                  Text(
+                    '当前月龄: ${_babyAgeInMonths}个月',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: AppColors.primary,
+    );
+  }
+
   Widget _buildProgressSection() {
     final overallProgress = _getOverallProgress();
+    final categoryProgress = _getCategoryProgress();
 
     return FadeInAnimation(
       delay: const Duration(milliseconds: 100),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
         padding: const EdgeInsets.all(AppDimensions.paddingLarge),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
@@ -167,295 +226,241 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '总体进度',
-                    style: AppTextStyles.subtitle.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_completedRecords.length}/${DefaultMilestones.totalCount}',
-                    style: AppTextStyles.headline.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '已完成 ${(overallProgress * 100).toInt()}%',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 80,
-              height: 80,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CircularProgressIndicator(
-                    value: overallProgress,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor: const AlwaysStoppedAnimation(Colors.white),
-                    strokeWidth: 10,
-                    strokeCap: StrokeCap.round,
-                  ),
-                  Center(
-                    child: Text(
-                      '${(overallProgress * 100).toInt()}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryProgressSection() {
-    final categoryProgress = _getCategoryProgress();
-
-    return FadeInAnimation(
-      delay: const Duration(milliseconds: 200),
-      child: AnimatedCard(
-        margin: const EdgeInsets.all(AppDimensions.paddingMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '各分类进度',
-              style: AppTextStyles.subtitle,
-            ),
-            const SizedBox(height: 16),
-            ...MilestoneCategory.values.map((category) {
-              final progress = categoryProgress[category] ?? 0;
-              final countByCategory = DefaultMilestones.countByCategory;
-              final totalInCategory = countByCategory[category] ?? 0;
-              final completedInCategory = (progress * totalInCategory).round();
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          category.icon,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            category.displayName,
-                            style: AppTextStyles.body,
-                          ),
-                        ),
-                        Text(
-                          '$completedInCategory/$totalInCategory',
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${(progress * 100).toInt()}%',
-                          style: AppTextStyles.body.copyWith(
-                            color: category.color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: AppColors.divider,
-                        valueColor: AlwaysStoppedAnimation(category.color),
-                        minHeight: 8,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrentMilestonesSection() {
-    final currentMilestones = _getCurrentMilestones();
-
-    if (currentMilestones.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return FadeInAnimation(
-      delay: const Duration(milliseconds: 300),
-      child: AnimatedCard(
-        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '当前关注',
-                  style: AppTextStyles.subtitle,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '总体进度',
+                        style: AppTextStyles.subtitle.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_completedRecords.length}/${MilestoneData.totalCount}',
+                        style: AppTextStyles.headline.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '已完成 ${(overallProgress * 100).toInt()}%',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                TextButton(
-                  onPressed: _navigateToList,
-                  child: const Text('查看全部'),
+                SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: overallProgress,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        valueColor: const AlwaysStoppedAnimation(Colors.white),
+                        strokeWidth: 10,
+                        strokeCap: StrokeCap.round,
+                      ),
+                      Center(
+                        child: Text(
+                          '${(overallProgress * 100).toInt()}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              '适合${_babyAgeInMonths}个月宝宝的里程碑：',
-              style: AppTextStyles.caption,
-            ),
-            const SizedBox(height: 12),
-            ...currentMilestones.asMap().entries.map((entry) {
-              final milestone = entry.value;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: milestone.category.color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      milestone.category.icon,
-                      size: 20,
-                      color: milestone.category.color,
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: MilestoneCategory.values.map((category) {
+                final progress = categoryProgress[category] ?? 0;
+                return Column(
+                  children: [
+                    Icon(category.icon, color: Colors.white70, size: 20),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ),
-                title: Text(
-                  milestone.title,
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: Text(
-                  milestone.category.displayName,
-                  style: AppTextStyles.caption.copyWith(
-                    color: milestone.category.color,
-                  ),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textTertiary,
-                ),
-                onTap: _navigateToList,
-              );
-            }),
+                  ],
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickStatsSection() {
-    // 计算最近完成的里程碑
-    final recentCompleted = _completedRecords.take(3).toList();
-
+  Widget _buildFilterSection() {
     return FadeInAnimation(
-      delay: const Duration(milliseconds: 400),
-      child: AnimatedCard(
-        margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
+      delay: const Duration(milliseconds: 200),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '最近完成',
-              style: AppTextStyles.subtitle,
-            ),
-            const SizedBox(height: 12),
-            if (recentCompleted.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    '还没有完成的里程碑，快去记录吧！',
-                    style: AppTextStyles.caption,
+            // 月龄筛选
+            Row(
+              children: [
+                Expanded(
+                  child: FilterChip(
+                    selected: _showCurrentAgeOnly,
+                    onSelected: (selected) {
+                      setState(() => _showCurrentAgeOnly = selected);
+                    },
+                    label: Text('当前月龄 (${_babyAgeInMonths}个月)'),
+                    avatar: const Icon(Icons.calendar_today, size: 18),
                   ),
                 ),
-              )
-            else
-              ...recentCompleted.map((record) {
-                final milestone = DefaultMilestones.getMilestoneById(record.milestoneId);
-                if (milestone == null) return const SizedBox.shrink();
-
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.check,
-                        color: AppColors.success,
+              ],
+            ),
+            const SizedBox(height: 8),
+            // 分类筛选
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  FilterChip(
+                    selected: _selectedCategory == null,
+                    onSelected: (_) => setState(() => _selectedCategory = null),
+                    label: const Text('全部'),
+                  ),
+                  const SizedBox(width: 8),
+                  ...MilestoneCategory.values.map((category) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        selected: _selectedCategory == category,
+                        onSelected: (selected) {
+                          setState(() => _selectedCategory = selected ? category : null);
+                        },
+                        label: Text(category.displayName),
+                        avatar: Icon(category.icon, size: 18, color: category.color),
+                        selectedColor: category.color.withOpacity(0.2),
+                        checkmarkColor: category.color,
                       ),
-                    ),
-                  ),
-                  title: Text(
-                    milestone.title,
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _formatDate(record.completedDate),
-                    style: AppTextStyles.caption,
-                  ),
-                  trailing: record.photoPath != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.file(
-                            File(record.photoPath!),
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : null,
-                );
-              }),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
+  Widget _buildMilestonesList() {
+    final milestones = _getFilteredMilestones();
+
+    if (milestones.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(
+          child: Text('没有符合条件的里程碑'),
+        ),
+      );
+    }
+
+    return FadeInAnimation(
+      delay: const Duration(milliseconds: 300),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: milestones.length,
+        itemBuilder: (context, index) {
+          final milestone = milestones[index];
+          final isCompleted = _isMilestoneCompleted(milestone.id);
+
+          return AnimatedCard(
+            margin: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.paddingMedium,
+              vertical: 4,
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.paddingMedium,
+                vertical: 4,
+              ),
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isCompleted
+                      ? AppColors.success.withOpacity(0.2)
+                      : milestone.category.color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                ),
+                child: Center(
+                  child: Icon(
+                    isCompleted ? Icons.check : milestone.category.icon,
+                    color: isCompleted ? AppColors.success : milestone.category.color,
+                    size: 24,
+                  ),
+                ),
+              ),
+              title: Text(
+                milestone.title,
+                style: AppTextStyles.body.copyWith(
+                  fontWeight: FontWeight.w500,
+                  decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  color: isCompleted ? AppColors.textTertiary : AppColors.textPrimary,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    '${milestone.minMonth}-${milestone.maxMonth}个月 · ${milestone.category.displayName}',
+                    style: AppTextStyles.caption,
+                  ),
+                  if (milestone.description.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      milestone.description,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+              trailing: isCompleted
+                  ? const Icon(Icons.check_circle, color: AppColors.success)
+                  : const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+              onTap: () => _navigateToDetail(milestone),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
