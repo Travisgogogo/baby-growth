@@ -28,10 +28,12 @@ class SharePosterService {
       );
 
       // 渲染为图片
-      final image = await _widgetToImage(
-        posterWidget,
-        size: const Size(1080, 1920),
+      final image = await _captureWidget(
+        widget: posterWidget,
+        width: 1080,
+        height: 1920,
       );
+      
       if (image == null) return null;
 
       // 保存到临时文件
@@ -61,10 +63,12 @@ class SharePosterService {
         endDate: endDate,
       );
 
-      final image = await _widgetToImage(
-        posterWidget,
-        size: const Size(1080, 1920),
+      final image = await _captureWidget(
+        widget: posterWidget,
+        width: 1080,
+        height: 1920,
       );
+      
       if (image == null) return null;
 
       final tempDir = await getTemporaryDirectory();
@@ -78,47 +82,66 @@ class SharePosterService {
     }
   }
 
-  /// 将 Widget 转换为图片
-  static Future<Uint8List?> _widgetToImage(Widget widget, {required Size size}) async {
-    final repaintBoundary = RenderRepaintBoundary();
+  /// 使用 Offscreen 渲染捕获 Widget
+  static Future<Uint8List?> _captureWidget({
+    required Widget widget,
+    required double width,
+    required double height,
+  }) async {
+    // 创建一个 OverlayEntry 来渲染 widget
+    final overlayState = OverlayState();
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Material(
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: widget,
+        ),
+      ),
+    );
     
+    // 使用 RepaintBoundary
+    final boundary = RenderRepaintBoundary();
+    
+    // 创建一个简单的渲染流程
     final renderView = RenderView(
       view: ui.PlatformDispatcher.instance.views.first,
       child: RenderPositionedBox(
         alignment: Alignment.center,
-        child: repaintBoundary,
+        child: boundary,
       ),
     );
 
     final pipelineOwner = PipelineOwner();
     pipelineOwner.rootNode = renderView;
-    renderView.prepareInitialFrame();
-
-    final buildOwner = BuildOwner(focusManager: FocusManager());
     
-    // 使用 SizedBox 给 widget 设置大小
-    final sizedWidget = SizedBox(
-      width: size.width,
-      height: size.height,
+    final buildOwner = BuildOwner();
+    
+    // 包装 widget 并设置大小
+    final wrappedWidget = SizedBox(
+      width: width,
+      height: height,
       child: widget,
     );
     
     final element = RenderObjectToWidgetAdapter(
-      container: repaintBoundary,
+      container: boundary,
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: sizedWidget,
+        child: wrappedWidget,
       ),
     ).attachToRenderTree(buildOwner);
 
+    // 执行构建和布局
     buildOwner.buildScope(element);
-    buildOwner.finalizeTree();
-
+    renderView.prepareInitialFrame();
+    
     pipelineOwner.flushLayout();
     pipelineOwner.flushCompositingBits();
     pipelineOwner.flushPaint();
 
-    final image = await repaintBoundary.toImage(pixelRatio: 3.0);
+    // 捕获图片
+    final image = await boundary.toImage(pixelRatio: 3.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     
     return byteData?.buffer.asUint8List();
@@ -162,7 +185,7 @@ class GrowthPosterWidget extends StatelessWidget {
   BoxDecoration _buildBackground() {
     switch (template) {
       case 'warm':
-        return BoxDecoration(
+        return const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -173,7 +196,7 @@ class GrowthPosterWidget extends StatelessWidget {
           ),
         );
       case 'fresh':
-        return BoxDecoration(
+        return const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -417,9 +440,9 @@ class GrowthPosterWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   '完成了新里程碑',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF333333),
