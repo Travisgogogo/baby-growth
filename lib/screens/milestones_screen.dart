@@ -148,35 +148,6 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          '发育里程碑',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: AppColors.primaryGradient,
-          ),
-        ),
-      ),
-      backgroundColor: AppColors.primary,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.list),
-          onPressed: _navigateToList,
-          tooltip: '查看全部',
-        ),
-      ],
-    );
-  }
-
   Widget _buildProgressSection() {
     final overallProgress = _getOverallProgress();
 
