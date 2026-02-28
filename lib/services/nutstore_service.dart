@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:http/io_client.dart';
 
 /// 坚果云 WebDAV 服务
 class NutstoreService {
@@ -12,14 +12,23 @@ class NutstoreService {
   
   /// 设置认证信息
   void setCredentials(String username, String password) {
-    _username = username;
-    _password = password;
+    _username = username.trim();
+    _password = password.trim();
   }
   
   /// 检查是否已设置认证
   bool get isAuthenticated => _username != null && _password != null;
   
-  /// 测试连接
+  /// 获取认证头
+  Map<String, String> _getAuthHeaders() {
+    final auth = base64Encode(utf8.encode('$_username:$_password'));
+    return {
+      'Authorization': 'Basic $auth',
+      'Content-Type': 'application/xml',
+    };
+  }
+  
+  /// 测试连接 - 使用简单的 GET 请求测试根目录
   Future<bool> testConnection() async {
     if (!isAuthenticated) {
       print('未设置认证信息');
@@ -30,26 +39,31 @@ class NutstoreService {
     print('用户名: $_username');
     
     try {
-      final client = http.Client();
-      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/'));
-      request.headers.addAll(_getAuthHeaders());
-      
-      print('请求头: ${request.headers}');
-      
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
-      final response = await http.Response.fromStream(streamedResponse);
+      // 使用 http 包的 get 方法测试
+      final response = await http.get(
+        Uri.parse('$_baseUrl/'),
+        headers: _getAuthHeaders(),
+      ).timeout(const Duration(seconds: 10));
       
       print('响应状态码: ${response.statusCode}');
-      print('响应体: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
       
-      if (response.statusCode == 401) {
-        print('认证失败: 用户名或密码错误');
-        return false;
-      }
+      // 207 是 WebDAV 成功状态码，401 是认证失败
       if (response.statusCode == 207 || response.statusCode == 200) {
         print('连接成功');
         return true;
+      } else if (response.statusCode == 401) {
+        print('认证失败: 用户名或密码错误');
+        return false;
+      } else {
+        print('连接失败: ${response.statusCode}');
+        print('响应: ${response.body}');
+        return false;
       }
+    } on SocketException catch (e) {
+      print('网络错误: $e');
+      return false;
+    } on TimeoutException catch (e) {
+      print('连接超时: $e');
       return false;
     } catch (e, stackTrace) {
       print('连接测试失败: $e');
@@ -73,7 +87,7 @@ class NutstoreService {
           'Content-Type': 'application/octet-stream',
         },
         body: data,
-      );
+      ).timeout(const Duration(seconds: 30));
       
       return response.statusCode == 201 || response.statusCode == 204;
     } catch (e) {
@@ -90,7 +104,7 @@ class NutstoreService {
       final response = await http.get(
         Uri.parse('$_baseUrl/baby-growth-backup/$remotePath'),
         headers: _getAuthHeaders(),
-      );
+      ).timeout(const Duration(seconds: 30));
       
       if (response.statusCode == 200) {
         return response.bodyBytes;
@@ -102,60 +116,10 @@ class NutstoreService {
     }
   }
   
-  /// 列出文件
-  Future<List<String>> listFiles() async {
-    if (!isAuthenticated) return [];
-    
-    try {
-      final client = http.Client();
-      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/baby-growth-backup/'));
-      request.headers.addAll({
-        ..._getAuthHeaders(),
-        'Depth': '1',
-      });
-      
-      final streamedResponse = await client.send(request);
-      final response = await http.Response.fromStream(streamedResponse);
-      
-      if (response.statusCode == 207) {
-        // 解析 WebDAV 响应
-        return _parsePropfindResponse(response.body);
-      }
-      return [];
-    } catch (e) {
-      print('列出文件失败: $e');
-      return [];
-    }
-  }
-  
-  /// 删除文件
-  Future<bool> deleteFile(String remotePath) async {
-    if (!isAuthenticated) return false;
-    
-    try {
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/baby-growth-backup/$remotePath'),
-        headers: _getAuthHeaders(),
-      );
-      
-      return response.statusCode == 204;
-    } catch (e) {
-      print('删除失败: $e');
-      return false;
-    }
-  }
-  
-  /// 获取认证头
-  Map<String, String> _getAuthHeaders() {
-    final auth = base64Encode(utf8.encode('$_username:$_password'));
-    return {
-      'Authorization': 'Basic $auth',
-    };
-  }
-  
   /// 创建目录
   Future<bool> _createDirectory(String dirName) async {
     try {
+      // 使用 http Client 发送 MKCOL 请求
       final client = http.Client();
       final request = http.Request('MKCOL', Uri.parse('$_baseUrl/$dirName'));
       request.headers.addAll(_getAuthHeaders());
@@ -163,25 +127,12 @@ class NutstoreService {
       final streamedResponse = await client.send(request);
       final response = await http.Response.fromStream(streamedResponse);
       
-      return response.statusCode == 201 || response.statusCode == 405; // 405 表示已存在
+      // 201 创建成功，405 目录已存在
+      return response.statusCode == 201 || response.statusCode == 405;
     } catch (e) {
+      print('创建目录失败: $e');
       return false;
     }
-  }
-  
-  /// 解析 PROPFIND 响应
-  List<String> _parsePropfindResponse(String xml) {
-    final files = <String>[];
-    // 简单解析，提取文件名
-    final regex = RegExp(r'<d:href>([^<]+)</d:href>');
-    final matches = regex.allMatches(xml);
-    for (final match in matches) {
-      final path = match.group(1);
-      if (path != null && path != '/baby-growth-backup/') {
-        files.add(path.split('/').last);
-      }
-    }
-    return files;
   }
 }
 
