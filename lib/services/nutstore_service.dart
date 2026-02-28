@@ -59,15 +59,14 @@ class NutstoreService {
         print('响应: ${response.body}');
         return false;
       }
-    } on SocketException catch (e) {
-      print('网络错误: $e');
-      return false;
-    } on TimeoutException catch (e) {
-      print('连接超时: $e');
-      return false;
-    } catch (e, stackTrace) {
-      print('连接测试失败: $e');
-      print('堆栈: $stackTrace');
+    } catch (e) {
+      if (e is async.TimeoutException) {
+        print('连接超时: $e');
+      } else if (e is SocketException) {
+        print('网络错误: $e');
+      } else {
+        print('连接测试失败: $e');
+      }
       return false;
     }
   }
