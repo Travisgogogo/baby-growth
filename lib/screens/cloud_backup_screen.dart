@@ -157,7 +157,7 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
     final feedRecords = await db.query('feed_records');
     final sleepRecords = await db.query('sleep_records');
     final diaperRecords = await db.query('diaper_records');
-    final milestones = await db.query('milestones');
+    final milestones = await db.query('milestone_records');
     final photos = await db.query('photos');
     final illnessRecords = await db.query('illness_records');
     final vaccineRecords = await db.query('vaccine_records');
