@@ -598,16 +598,16 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
               // 结束时间
               ListTile(
                 title: const Text('结束时间'),
-                subtitle: Text(endTime != null 
-                  ? '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}'
-                  : '进行中'),
+                subtitle: Text(endTime != null
+                    ? '${endTime!.hour.toString().padLeft(2, '0')}:${endTime!.minute.toString().padLeft(2, '0')}'
+                    : '进行中'),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final time = await showTimePicker(
                     context: context,
-                    initialTime: endTime != null 
-                      ? TimeOfDay.fromDateTime(endTime)
-                      : TimeOfDay.now(),
+                    initialTime: endTime != null
+                        ? TimeOfDay.fromDateTime(endTime!)
+                        : TimeOfDay.now(),
                   );
                   if (time != null) {
                     setDialogState(() {
