@@ -18,7 +18,6 @@ import 'records_screen.dart';
 import 'milestones_screen.dart';
 import 'profile_screen.dart';
 import 'health_screen.dart';
-import 'share_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -118,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
       const RecordsScreen(),
       const MilestonesScreen(),
       const HealthScreen(),
-      const ShareScreen(),
       const ProfileScreen(),
     ];
 
@@ -142,7 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: '记录'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: '里程碑'),
           BottomNavigationBarItem(icon: Icon(Icons.health_and_safety), label: '健康'),
-          BottomNavigationBarItem(icon: Icon(Icons.share), label: '分享'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
       ),
@@ -442,11 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -454,9 +451,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: actions.map((action) => _buildActionButton(action)).toList(),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: actions.map((action) => _buildActionButton(action)).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -526,8 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -552,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppDimensions.paddingMedium),
               decoration: BoxDecoration(
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -610,8 +610,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -738,8 +737,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const MilestonesScreen()),
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

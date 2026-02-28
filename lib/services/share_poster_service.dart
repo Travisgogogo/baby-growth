@@ -80,6 +80,11 @@ class SharePosterService {
     final platformDispatcher = ui.PlatformDispatcher.instance;
     final flutterView = platformDispatcher.views.first;
     
+    // Flutter 3.x 兼容：ViewConfiguration 不再接受 size 参数
+    // 使用 physicalSize 和 devicePixelRatio 来计算逻辑尺寸
+    final physicalSize = flutterView.physicalSize;
+    final devicePixelRatio = flutterView.devicePixelRatio;
+    
     final renderView = RenderView(
       view: flutterView,
       child: RenderPositionedBox(

@@ -1,7 +1,7 @@
 name: baby_growth
 description: 宝宝成长记录
 publish_to: 'none'
-version: 1.2.0+14
+version: 1.1.1+12
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,9 +20,6 @@ dependencies:
   # 应用内更新
   package_info_plus: ^5.0.1
   permission_handler: ^11.3.0
-  
-  # 分享功能
-  share_plus: ^7.2.0
 
 dev_dependencies:
   flutter_test:

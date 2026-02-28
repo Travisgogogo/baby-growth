@@ -135,7 +135,7 @@ class _ShareScreenState extends State<ShareScreen> {
     final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
     for (final record in growthRecords.take(5)) {
       items.add(TimelineItem(
-        date: record.date,
+        date: record.date,  // 修复：record.date 已经是 DateTime 类型
         title: '测量了身高体重',
         description: '体重: ${record.weight?.toStringAsFixed(1)}kg, 身高: ${record.height?.toStringAsFixed(0)}cm',
         type: TimelineItemType.growth,
@@ -153,104 +153,238 @@ class _ShareScreenState extends State<ShareScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('分享成长'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          '分享成长',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _baby == null
-              ? _buildEmptyState()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionTitle('成长海报'),
-                      const SizedBox(height: 12),
-                      _buildPosterTemplates(),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('时光轴回顾'),
-                      const SizedBox(height: 12),
-                      _buildTimelineCard(),
-                    ],
-                  ),
-                ),
+              ? _buildNoBabyView()
+              : _buildShareContent(),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildNoBabyView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.child_care, size: 80, color: AppColors.textTertiary),
+          Icon(
+            Icons.baby_changing_station,
+            size: 80,
+            color: AppColors.primary.withOpacity(0.3),
+          ),
           const SizedBox(height: 16),
-          Text(
-            '请先添加宝宝信息',
-            style: AppTextStyles.subtitle.copyWith(color: AppColors.textSecondary),
+          const Text(
+            '还没有添加宝宝信息',
+            style: TextStyle(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '先去添加宝宝信息吧',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textLight,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.headline.copyWith(
-        fontWeight: FontWeight.bold,
+  Widget _buildShareContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 宝宝信息卡片
+          _buildBabyInfoCard(),
+          const SizedBox(height: 24),
+          
+          // 分享海报选项
+          const Text(
+            '生成分享海报',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // 海报模板选择
+          _buildPosterTemplates(),
+          const SizedBox(height: 24),
+          
+          // 时光轴分享
+          const Text(
+            '成长时光轴',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          _buildTimelineCard(),
+          
+          if (_isGenerating) ...[
+            const SizedBox(height: 24),
+            const Center(
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 8),
+                  Text(
+                    '正在生成海报...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBabyInfoCard() {
+    return FadeInAnimation(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFA726), Color(0xFFFF7043)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF7043).withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.child_care,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _baby!.name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_baby!.ageText} · ${_baby!.genderText}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                  if (_latestGrowth != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '身高: ${_latestGrowth!.height?.toStringAsFixed(1) ?? "--"}cm  体重: ${_latestGrowth!.weight?.toStringAsFixed(2) ?? "--"}kg',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPosterTemplates() {
     final templates = [
-      _TemplateItem('default', '默认', [Color(0xFFE3F2FD), Color(0xFFBBDEFB)]),
-      _TemplateItem('warm', '温暖', [Color(0xFFFFE4D6), Color(0xFFFFD4E5)]),
-      _TemplateItem('fresh', '清新', [Color(0xFFE0F7FA), Color(0xFFB2EBF2)]),
+      {'name': '简约', 'color': const Color(0xFF81C784)},
+      {'name': '可爱', 'color': const Color(0xFFFFB74D)},
+      {'name': '温馨', 'color': const Color(0xFF64B5F6)},
     ];
 
     return Row(
       children: templates.map((template) {
         return Expanded(
-          child: AnimatedButton(
-            onTap: () => _generateAndSharePoster(template.id),
-            backgroundColor: Colors.transparent,
-            padding: EdgeInsets.zero,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: template.colors,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ScaleTapAnimation(
+              onTap: () => _generateAndSharePoster(template['name'] as String),
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: (template['color'] as Color).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: (template['color'] as Color).withOpacity(0.3),
                   ),
-                ],
-              ),
-              child: Center(
-                child: _isGenerating
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        template.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF333333),
-                        ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image,
+                      size: 32,
+                      color: template['color'] as Color,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      template['name'] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: template['color'] as Color,
                       ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -260,59 +394,68 @@ class _ShareScreenState extends State<ShareScreen> {
   }
 
   Widget _buildTimelineCard() {
-    return AnimatedCard(
+    return ScaleTapAnimation(
       onTap: _generateTimelinePoster,
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-            child: const Icon(
-              Icons.timeline,
-              color: Colors.white,
-              size: 40,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.timeline,
+                color: AppColors.primary,
+                size: 28,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '生成时光轴',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '成长时光轴',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '回顾宝宝的成长历程',
-                  style: AppTextStyles.caption,
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '回顾${_baby!.name}的成长历程',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          _isGenerating
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-        ],
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: AppColors.textLight,
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-class _TemplateItem {
-  final String id;
-  final String name;
-  final List<Color> colors;
-
-  _TemplateItem(this.id, this.name, this.colors);
 }
