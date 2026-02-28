@@ -75,13 +75,21 @@ class SharePosterService {
   /// 将 Widget 转换为图片
   static Future<Uint8List?> _widgetToImage(Widget widget) async {
     final repaintBoundary = RenderRepaintBoundary();
+    
+    // 使用 PlatformDispatcher 替代 window
+    final platformDispatcher = ui.PlatformDispatcher.instance;
+    final flutterView = platformDispatcher.views.first;
+    
     final renderView = RenderView(
-      window: ui.window,
+      view: flutterView,
       child: RenderPositionedBox(
         alignment: Alignment.center,
         child: repaintBoundary,
       ),
-      configuration: const ViewConfiguration(),
+      configuration: ViewConfiguration(
+        size: flutterView.physicalSize / flutterView.devicePixelRatio,
+        devicePixelRatio: flutterView.devicePixelRatio,
+      ),
     );
 
     final pipelineOwner = PipelineOwner();
