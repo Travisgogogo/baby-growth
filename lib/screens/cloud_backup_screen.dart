@@ -166,7 +166,7 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
       if (success) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_backup_time', DateTime.now().toIso8601String());
-        await _loadLastBackupTime();
+        await _loadSavedData();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
