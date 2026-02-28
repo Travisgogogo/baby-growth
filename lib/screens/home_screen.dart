@@ -4,6 +4,7 @@ import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../constants/who_growth_data.dart';
 import '../widgets/animations.dart';
+import '../widgets/sleep_prediction.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -153,11 +154,19 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_baby == null) {
       return _buildEmptyState();
     }
+    
+    // 计算睡眠预测
+    final sleepPrediction = SleepPredictor.predictNextSleep(
+      baby: _baby!,
+      recentRecords: _recentSleeps,
+    );
+    
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
           children: [
             _buildHeader(),
+            SleepPredictionCard(prediction: sleepPrediction),
             _buildQuickActions(),
             _buildGrowthChart(),
             _buildRecentRecords(),

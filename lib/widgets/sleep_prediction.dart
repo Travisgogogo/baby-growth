@@ -1,0 +1,374 @@
+import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
+import '../models/baby.dart';
+import '../models/sleep_record.dart';
+
+/// 睡眠预测工具类
+class SleepPredictor {
+  /// 根据月龄获取标准清醒间隔（分钟）
+  static int getStandardWakeWindow(int ageInMonths) {
+    if (ageInMonths < 1) return 45;      // 新生儿
+    if (ageInMonths < 3) return 60;      // 1-2个月
+    if (ageInMonths < 5) return 90;      // 3-4个月
+    if (ageInMonths < 7) return 120;     // 5-6个月
+    if (ageInMonths < 10) return 180;    // 7-9个月
+    if (ageInMonths < 14) return 240;    // 10-13个月
+    if (ageInMonths < 20) return 300;    // 14-19个月
+    return 360;                           // 20个月以上
+  }
+
+  /// 预测下次入睡时间
+  static SleepPrediction? predictNextSleep({
+    required Baby baby,
+    required List<SleepRecord> recentRecords,
+  }) {
+    if (recentRecords.isEmpty) return null;
+
+    // 获取最近一次睡眠
+    final lastSleep = recentRecords.first;
+    if (lastSleep.endTime == null) {
+      // 还在睡觉中
+      return SleepPrediction(
+        status: SleepStatus.sleeping,
+        message: '宝宝正在睡觉',
+        nextSleepTime: null,
+        minutesUntilSleepy: null,
+      );
+    }
+
+    // 计算已清醒时长
+    final now = DateTime.now();
+    final awakeDuration = now.difference(lastSleep.endTime!);
+    final awakeMinutes = awakeDuration.inMinutes;
+
+    // 获取标准清醒间隔
+    final ageInMonths = baby.ageInMonths ?? 0;
+    final standardWindow = getStandardWakeWindow(ageInMonths);
+
+    // 根据上次睡眠时长修正
+    final lastSleepDuration = lastSleep.endTime!.difference(lastSleep.startTime).inMinutes;
+    int adjustedWindow = standardWindow;
+    
+    if (lastSleepDuration < 45) {
+      // 短觉，下次提前睡
+      adjustedWindow -= 30;
+    } else if (lastSleepDuration > 90) {
+      // 长觉，下次可以晚一点
+      adjustedWindow += 15;
+    }
+
+    // 计算距离困倦还有多久
+    final minutesUntilSleepy = adjustedWindow - awakeMinutes;
+
+    if (minutesUntilSleepy <= 0) {
+      return SleepPrediction(
+        status: SleepStatus.overdue,
+        message: '宝宝可能已经困了',
+        nextSleepTime: now,
+        minutesUntilSleepy: 0,
+        progress: 1.0,
+      );
+    }
+
+    // 计算进度（0-1）
+    final progress = awakeMinutes / adjustedWindow;
+
+    // 生成状态消息
+    String message;
+    SleepStatus status;
+    
+    if (progress < 0.5) {
+      status = SleepStatus.awake;
+      message = '宝宝精神不错';
+    } else if (progress < 0.8) {
+      status = SleepStatus.gettingSleepy;
+      message = '开始有点困了';
+    } else {
+      status = SleepStatus.sleepySoon;
+      message = '很快就要困了';
+    }
+
+    return SleepPrediction(
+      status: status,
+      message: message,
+      nextSleepTime: now.add(Duration(minutes: minutesUntilSleepy)),
+      minutesUntilSleepy: minutesUntilSleepy,
+      progress: progress.clamp(0.0, 1.0),
+      standardWakeWindow: standardWindow,
+      awakeMinutes: awakeMinutes,
+    );
+  }
+}
+
+/// 睡眠预测结果
+class SleepPrediction {
+  final SleepStatus status;
+  final String message;
+  final DateTime? nextSleepTime;
+  final int? minutesUntilSleepy;
+  final double? progress;
+  final int? standardWakeWindow;
+  final int? awakeMinutes;
+
+  SleepPrediction({
+    required this.status,
+    required this.message,
+    this.nextSleepTime,
+    this.minutesUntilSleepy,
+    this.progress,
+    this.standardWakeWindow,
+    this.awakeMinutes,
+  });
+
+  /// 格式化显示时间
+  String get formattedTime {
+    if (nextSleepTime == null) return '--:--';
+    final hour = nextSleepTime!.hour.toString().padLeft(2, '0');
+    final minute = nextSleepTime!.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  /// 格式化显示剩余时间
+  String get formattedRemaining {
+    if (minutesUntilSleepy == null) return '';
+    if (minutesUntilSleepy! <= 0) return '现在';
+    final hours = minutesUntilSleepy! ~/ 60;
+    final mins = minutesUntilSleepy! % 60;
+    if (hours > 0) {
+      return '${hours}小时${mins}分钟';
+    }
+    return '${mins}分钟';
+  }
+}
+
+enum SleepStatus {
+  sleeping,      // 正在睡觉
+  awake,         // 清醒
+  gettingSleepy, // 开始困了
+  sleepySoon,    // 很快要困
+  overdue,       // 已经超时
+}
+
+/// 睡眠预测卡片组件
+class SleepPredictionCard extends StatelessWidget {
+  final SleepPrediction? prediction;
+
+  const SleepPredictionCard({
+    super.key,
+    this.prediction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (prediction == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: _buildGradient(),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: _buildShadowColor(),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _buildIcon(),
+                color: Colors.white,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '睡眠预测',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  prediction!.message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (prediction!.status == SleepStatus.sleeping)
+            _buildSleepingView()
+          else
+            _buildAwakeView(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleepingView() {
+    return const Row(
+      children: [
+        Icon(
+          Icons.bedtime,
+          color: Colors.white,
+          size: 48,
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            '宝宝正在睡觉，好好休息',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAwakeView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '预计入睡时间',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    prediction!.formattedTime,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  '还有',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  prediction!.formattedRemaining,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (prediction!.progress != null) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: prediction!.progress,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation(Colors.white),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '已清醒 ${prediction!.awakeMinutes} 分钟 / 建议 ${prediction!.standardWakeWindow} 分钟',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  LinearGradient _buildGradient() {
+    switch (prediction!.status) {
+      case SleepStatus.sleeping:
+        return const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+        );
+      case SleepStatus.awake:
+        return const LinearGradient(
+          colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+        );
+      case SleepStatus.gettingSleepy:
+        return const LinearGradient(
+          colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+        );
+      case SleepStatus.sleepySoon:
+      case SleepStatus.overdue:
+        return const LinearGradient(
+          colors: [Color(0xFFfa709a), Color(0xFFfee140)],
+        );
+    }
+  }
+
+  Color _buildShadowColor() {
+    switch (prediction!.status) {
+      case SleepStatus.sleeping:
+        return const Color(0xFF667eea).withOpacity(0.4);
+      case SleepStatus.awake:
+        return const Color(0xFF11998e).withOpacity(0.4);
+      case SleepStatus.gettingSleepy:
+        return const Color(0xFFf093fb).withOpacity(0.4);
+      case SleepStatus.sleepySoon:
+      case SleepStatus.overdue:
+        return const Color(0xFFfa709a).withOpacity(0.4);
+    }
+  }
+
+  IconData _buildIcon() {
+    switch (prediction!.status) {
+      case SleepStatus.sleeping:
+        return Icons.bedtime;
+      case SleepStatus.awake:
+        return Icons.wb_sunny;
+      case SleepStatus.gettingSleepy:
+        return Icons.cloud;
+      case SleepStatus.sleepySoon:
+      case SleepStatus.overdue:
+        return Icons.bedtime;
+    }
+  }
+}
