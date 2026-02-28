@@ -21,20 +21,39 @@ class NutstoreService {
   
   /// 测试连接
   Future<bool> testConnection() async {
-    if (!isAuthenticated) return false;
+    if (!isAuthenticated) {
+      print('未设置认证信息');
+      return false;
+    }
+    
+    print('测试连接: $_baseUrl/');
+    print('用户名: $_username');
     
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/'),
-        headers: _getAuthHeaders(),
-      );
-      print('坚果云连接测试: status=${response.statusCode}');
+      final client = http.Client();
+      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/'));
+      request.headers.addAll(_getAuthHeaders());
+      
+      print('请求头: ${request.headers}');
+      
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      print('响应状态码: ${response.statusCode}');
+      print('响应体: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+      
       if (response.statusCode == 401) {
-        print('认证失败: 请检查用户名和应用密码');
+        print('认证失败: 用户名或密码错误');
+        return false;
       }
-      return response.statusCode == 200 || response.statusCode == 207;
-    } catch (e) {
+      if (response.statusCode == 207 || response.statusCode == 200) {
+        print('连接成功');
+        return true;
+      }
+      return false;
+    } catch (e, stackTrace) {
       print('连接测试失败: $e');
+      print('堆栈: $stackTrace');
       return false;
     }
   }

@@ -30,8 +30,8 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
     setState(() => _isLoading = true);
     
     nutstoreService.setCredentials(
-      _usernameController.text,
-      _passwordController.text,
+      _usernameController.text.trim(),
+      _passwordController.text.trim(),
     );
     
     final connected = await nutstoreService.testConnection();
@@ -45,10 +45,31 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
         const SnackBar(content: Text('连接成功')),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('连接失败，请检查：\n1. 用户名是否正确\n2. 使用应用密码而非登录密码\n3. 网络连接正常'),
-          duration: Duration(seconds: 5),
+      // 显示详细错误信息
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('连接失败'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('请检查以下设置：'),
+              SizedBox(height: 8),
+              Text('1. 用户名是坚果云邮箱'),
+              Text('2. 密码是应用密码（非登录密码）'),
+              Text('3. 在坚果云网页版生成应用密码'),
+              SizedBox(height: 8),
+              Text('生成应用密码步骤：'),
+              Text('网页版 → 安全设置 → 第三方应用管理 → 添加应用密码'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('知道了'),
+            ),
+          ],
         ),
       );
     }
