@@ -86,10 +86,6 @@ class SharePosterService {
         alignment: Alignment.center,
         child: repaintBoundary,
       ),
-      configuration: ViewConfiguration(
-        size: flutterView.physicalSize / flutterView.devicePixelRatio,
-        devicePixelRatio: flutterView.devicePixelRatio,
-      ),
     );
 
     final pipelineOwner = PipelineOwner();

@@ -135,7 +135,7 @@ class _ShareScreenState extends State<ShareScreen> {
     final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
     for (final record in growthRecords.take(5)) {
       items.add(TimelineItem(
-        date: DateTime.parse(record.date),
+        date: record.date,
         title: '测量了身高体重',
         description: '体重: ${record.weight?.toStringAsFixed(1)}kg, 身高: ${record.height?.toStringAsFixed(0)}cm',
         type: TimelineItemType.growth,
