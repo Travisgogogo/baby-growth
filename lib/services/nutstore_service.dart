@@ -84,14 +84,15 @@ class NutstoreService {
     if (!isAuthenticated) return [];
     
     try {
-      final response = await http.request(
-        'PROPFIND',
-        Uri.parse('$_baseUrl/baby-growth-backup/'),
-        headers: {
-          ..._getAuthHeaders(),
-          'Depth': '1',
-        },
-      );
+      final client = http.Client();
+      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/baby-growth-backup/'));
+      request.headers.addAll({
+        ..._getAuthHeaders(),
+        'Depth': '1',
+      });
+      
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
       
       if (response.statusCode == 207) {
         // 解析 WebDAV 响应
@@ -132,11 +133,13 @@ class NutstoreService {
   /// 创建目录
   Future<bool> _createDirectory(String dirName) async {
     try {
-      final response = await http.request(
-        'MKCOL',
-        Uri.parse('$_baseUrl/$dirName'),
-        headers: _getAuthHeaders(),
-      );
+      final client = http.Client();
+      final request = http.Request('MKCOL', Uri.parse('$_baseUrl/$dirName'));
+      request.headers.addAll(_getAuthHeaders());
+      
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      
       return response.statusCode == 201 || response.statusCode == 405; // 405 表示已存在
     } catch (e) {
       return false;
