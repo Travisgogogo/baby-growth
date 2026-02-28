@@ -28,6 +28,10 @@ class NutstoreService {
         Uri.parse('$_baseUrl/'),
         headers: _getAuthHeaders(),
       );
+      print('坚果云连接测试: status=${response.statusCode}');
+      if (response.statusCode == 401) {
+        print('认证失败: 请检查用户名和应用密码');
+      }
       return response.statusCode == 200 || response.statusCode == 207;
     } catch (e) {
       print('连接测试失败: $e');

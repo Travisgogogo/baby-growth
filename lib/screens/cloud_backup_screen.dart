@@ -46,7 +46,10 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('连接失败')),
+        const SnackBar(
+          content: Text('连接失败，请检查：\n1. 用户名是否正确\n2. 使用应用密码而非登录密码\n3. 网络连接正常'),
+          duration: Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -76,7 +79,7 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
             TextField(
               controller: _usernameController,
               decoration: const InputDecoration(
-                labelText: '坚果云用户名',
+                labelText: '坚果云用户名（邮箱）',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -85,9 +88,9 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
               controller: _passwordController,
               obscureText: true,
               decoration: const InputDecoration(
-                labelText: '应用密码',
+                labelText: '应用密码（非登录密码）',
                 border: OutlineInputBorder(),
-                helperText: '在坚果云网页版生成应用密码',
+                helperText: '在坚果云网页版 → 安全设置 → 第三方应用管理 → 生成应用密码',
               ),
             ),
             const SizedBox(height: 24),
