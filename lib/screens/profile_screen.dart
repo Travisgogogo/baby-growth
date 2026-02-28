@@ -8,6 +8,7 @@ import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
 import 'share_screen.dart';
+import 'cloud_backup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -485,6 +486,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           FadeInAnimation(
             delay: const Duration(milliseconds: 200),
             child: _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 250),
+            child: _buildMenuItem(Icons.cloud, '云端备份', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CloudBackupScreen()),
+              );
+            }),
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 250),
