@@ -17,7 +17,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.myapp/update"
+    private val CHANNEL = "com.example.babygrowth/update"
     private var downloadId: Long = -1
     private lateinit var downloadReceiver: BroadcastReceiver
 

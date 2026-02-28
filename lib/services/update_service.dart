@@ -10,7 +10,7 @@ class UpdateService {
   static const String _repoOwner = 'Travisgogogo';
   static const String _repoName = 'baby-growth';
   static const String _apiUrl = 'https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest';
-  static const platform = MethodChannel('com.example.myapp/update');
+  static const platform = MethodChannel('com.example.babygrowth/update');
 
   static Future<UpdateInfo?> checkUpdate() async {
     try {
