@@ -22,18 +22,58 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
   bool _isConnected = false;
   String? _lastBackupTime;
   List<String> _backupFiles = [];
+  bool _rememberCredentials = false;
 
   @override
   void initState() {
     super.initState();
-    _loadLastBackupTime();
+    _loadSavedData();
   }
 
-  Future<void> _loadLastBackupTime() async {
+  Future<void> _loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _lastBackupTime = prefs.getString('last_backup_time');
+      _rememberCredentials = prefs.getBool('nutstore_remember_credentials') ?? false;
+      if (_rememberCredentials) {
+        _usernameController.text = prefs.getString('nutstore_username') ?? '';
+        _passwordController.text = prefs.getString('nutstore_password') ?? '';
+      }
     });
+    
+    // 如果已有保存的凭据，自动尝试连接
+    if (_rememberCredentials && _usernameController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+      _autoConnect();
+    }
+  }
+  
+  Future<void> _autoConnect() async {
+    setState(() => _isLoading = true);
+    
+    nutstoreService.setCredentials(
+      _usernameController.text.trim(),
+      _passwordController.text.trim(),
+    );
+    
+    final result = await nutstoreService.testConnectionWithDetails();
+    final connected = result['success'] as bool;
+    
+    setState(() {
+      _isConnected = connected;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('nutstore_remember_credentials', _rememberCredentials);
+    if (_rememberCredentials) {
+      await prefs.setString('nutstore_username', _usernameController.text.trim());
+      await prefs.setString('nutstore_password', _passwordController.text.trim());
+    } else {
+      await prefs.remove('nutstore_username');
+      await prefs.remove('nutstore_password');
+    }
   }
 
   Future<void> _connect() async {
@@ -61,6 +101,9 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
     });
     
     if (connected) {
+      // 保存凭据设置
+      await _saveCredentials();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('连接成功')),
       );
@@ -229,7 +272,42 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
                 helperText: '在坚果云网页版 → 安全设置 → 第三方应用管理 → 生成应用密码',
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Checkbox(
+                  value: _rememberCredentials,
+                  onChanged: (value) {
+                    setState(() {
+                      _rememberCredentials = value ?? false;
+                    });
+                  },
+                ),
+                const Text('记住账号密码'),
+                const Spacer(),
+                if (_rememberCredentials)
+                  TextButton(
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('nutstore_username');
+                      await prefs.remove('nutstore_password');
+                      await prefs.setBool('nutstore_remember_credentials', false);
+                      setState(() {
+                        _rememberCredentials = false;
+                        _usernameController.clear();
+                        _passwordController.clear();
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('已清除保存的账号密码')),
+                        );
+                      }
+                    },
+                    child: const Text('清除'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _isLoading ? null : _connect,
               child: _isLoading
