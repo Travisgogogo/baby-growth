@@ -451,6 +451,10 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                               ),
                           ],
                         ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                          onPressed: () => _editSleepRecord(record),
+                        ),
                       ),
                     ),
                   ),
@@ -537,6 +541,10 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                   ),
                   title: Text(record.type, style: AppTextStyles.body),
                   subtitle: Text(_formatTime(record.time), style: AppTextStyles.caption),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                    onPressed: () => _editDiaperRecord(record),
+                  ),
                 ),
               ),
             ),
@@ -552,5 +560,169 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
 
   String _formatDate(DateTime date) {
     return '${date.year}年${date.month}月${date.day}日';
+  }
+
+  void _editSleepRecord(SleepRecord record) {
+    // 解析现有的开始和结束时间
+    DateTime startTime = record.startTime;
+    DateTime? endTime = record.endTime;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑睡眠记录'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 开始时间
+              ListTile(
+                title: const Text('开始时间'),
+                subtitle: Text('${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(startTime),
+                  );
+                  if (time != null) {
+                    setDialogState(() {
+                      startTime = DateTime(
+                        startTime.year, startTime.month, startTime.day,
+                        time.hour, time.minute,
+                      );
+                    });
+                  }
+                },
+              ),
+              // 结束时间
+              ListTile(
+                title: const Text('结束时间'),
+                subtitle: Text(endTime != null 
+                  ? '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}'
+                  : '进行中'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: endTime != null 
+                      ? TimeOfDay.fromDateTime(endTime)
+                      : TimeOfDay.now(),
+                  );
+                  if (time != null) {
+                    setDialogState(() {
+                      endTime = DateTime(
+                        startTime.year, startTime.month, startTime.day,
+                        time.hour, time.minute,
+                      );
+                      // 如果结束时间早于开始时间，认为是第二天
+                      if (endTime!.isBefore(startTime)) {
+                        endTime = endTime!.add(const Duration(days: 1));
+                      }
+                    });
+                  }
+                },
+              ),
+              // 清除结束时间按钮
+              if (endTime != null)
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      endTime = null;
+                    });
+                  },
+                  child: const Text('标记为进行中'),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final updated = record.copyWith(
+                  startTime: startTime,
+                  endTime: endTime,
+                );
+                await DatabaseService.instance.updateSleepRecord(updated);
+                Navigator.pop(context);
+                await _loadData();
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editDiaperRecord(DiaperRecord record) {
+    String diaperType = record.type;
+    DateTime time = record.time;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑换尿布记录'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: '湿尿', label: Text('湿尿')),
+                  ButtonSegment(value: '大便', label: Text('大便')),
+                  ButtonSegment(value: '两者', label: Text('两者')),
+                ],
+                selected: {diaperType},
+                onSelectionChanged: (set) {
+                  setDialogState(() => diaperType = set.first);
+                },
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('时间'),
+                subtitle: Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final newTime = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(time),
+                  );
+                  if (newTime != null) {
+                    setDialogState(() {
+                      time = DateTime(
+                        time.year, time.month, time.day,
+                        newTime.hour, newTime.minute,
+                      );
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final updated = record.copyWith(
+                  type: diaperType,
+                  time: time,
+                );
+                await DatabaseService.instance.updateDiaperRecord(updated);
+                Navigator.pop(context);
+                await _loadData();
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

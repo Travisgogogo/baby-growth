@@ -297,13 +297,31 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
           ),
           subtitle: Text(v.scheduledTime, style: AppTextStyles.caption),
           trailing: v.completed
-              ? Text(
-                  '${v.completedDate?.month}月${v.completedDate?.day}日',
-                  style: AppTextStyles.caption,
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${v.completedDate?.month}月${v.completedDate?.day}日',
+                      style: AppTextStyles.caption,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                      onPressed: () => _editVaccineRecord(v),
+                    ),
+                  ],
                 )
-              : TextButton(
-                  onPressed: () => _markVaccineCompleted(v),
-                  child: const Text('标记完成'),
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () => _markVaccineCompleted(v),
+                      child: const Text('标记完成'),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                      onPressed: () => _editVaccineRecord(v),
+                    ),
+                  ],
                 ),
         ),
       ),
@@ -374,27 +392,45 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                 ],
               ),
               if (record.isOngoing)
-                AnimatedButton(
-                  onTap: () => _markRecovered(record),
-                  backgroundColor: AppColors.success,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check, size: 16, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text('已痊愈', style: AppTextStyles.caption.copyWith(color: Colors.white)),
-                    ],
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedButton(
+                      onTap: () => _markRecovered(record),
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check, size: 16, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text('已痊愈', style: AppTextStyles.caption.copyWith(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                      onPressed: () => _editIllnessRecord(record),
+                    ),
+                  ],
                 )
               else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                  ),
-                  child: Text('已痊愈', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                      ),
+                      child: Text('已痊愈', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                      onPressed: () => _editIllnessRecord(record),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -415,5 +451,205 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
         ],
       ),
     );
+  }
+
+  void _editVaccineRecord(VaccineRecord record) {
+    DateTime? completedDate = record.completedDate;
+    bool isCompleted = record.completed;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('编辑 ${record.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CheckboxListTile(
+                title: const Text('已完成接种'),
+                value: isCompleted,
+                onChanged: (value) {
+                  setDialogState(() {
+                    isCompleted = value ?? false;
+                    if (isCompleted && completedDate == null) {
+                      completedDate = DateTime.now();
+                    }
+                  });
+                },
+              ),
+              if (isCompleted)
+                ListTile(
+                  title: const Text('接种日期'),
+                  subtitle: Text(completedDate != null
+                      ? '${completedDate!.year}年${completedDate!.month}月${completedDate!.day}日'
+                      : '未选择'),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: completedDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) {
+                      setDialogState(() {
+                        completedDate = date;
+                      });
+                    }
+                  },
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final updated = record.copyWith(
+                  completed: isCompleted,
+                  completedDate: isCompleted ? completedDate : null,
+                );
+                await DatabaseService.instance.updateVaccineRecord(updated);
+                Navigator.pop(context);
+                await _loadData();
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editIllnessRecord(IllnessRecord record) {
+    final symptomController = TextEditingController(text: record.symptom);
+    final tempController = TextEditingController(text: record.temperature?.toString());
+    final descController = TextEditingController(text: record.description);
+    final treatmentController = TextEditingController(text: record.treatment);
+    DateTime startTime = record.startTime;
+    DateTime? endTime = record.endTime;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑疾病记录'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: symptomController,
+                  decoration: const InputDecoration(labelText: '症状', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: tempController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: '体温 (°C)', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: '描述', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: treatmentController,
+                  decoration: const InputDecoration(labelText: '治疗措施', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: const Text('开始时间'),
+                  subtitle: Text(_formatDateTime(startTime)),
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: startTime,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(startTime),
+                      );
+                      if (time != null) {
+                        setDialogState(() {
+                          startTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        });
+                      }
+                    }
+                  },
+                ),
+                ListTile(
+                  title: const Text('结束时间'),
+                  subtitle: Text(endTime != null ? _formatDateTime(endTime!) : '进行中'),
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: endTime ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: endTime != null ? TimeOfDay.fromDateTime(endTime!) : TimeOfDay.now(),
+                      );
+                      if (time != null) {
+                        setDialogState(() {
+                          endTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                        });
+                      }
+                    }
+                  },
+                ),
+                if (endTime != null)
+                  TextButton(
+                    onPressed: () {
+                      setDialogState(() {
+                        endTime = null;
+                      });
+                    },
+                    child: const Text('标记为进行中'),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final updated = record.copyWith(
+                  symptom: symptomController.text,
+                  temperature: double.tryParse(tempController.text),
+                  description: descController.text,
+                  treatment: treatmentController.text,
+                  startTime: startTime,
+                  endTime: endTime,
+                );
+                await DatabaseService.instance.updateIllnessRecord(updated);
+                Navigator.pop(context);
+                await _loadData();
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }

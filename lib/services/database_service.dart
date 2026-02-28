@@ -484,6 +484,22 @@ class DatabaseService {
     }
   }
 
+  Future<bool> updateDiaperRecord(DiaperRecord record) async {
+    try {
+      final db = await database;
+      await db.update(
+        'diaper_records',
+        record.toMap(),
+        where: 'id = ?',
+        whereArgs: [record.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新换尿布记录失败: $e');
+      return false;
+    }
+  }
+
   Future<List<DiaperRecord>> getDiaperRecords(int babyId) async {
     try {
       final db = await database;
