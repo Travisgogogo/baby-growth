@@ -3,6 +3,13 @@ import 'constants/app_theme.dart';
 import 'screens/home_screen.dart';
 
 void main() {
+  // 捕获 Flutter 错误
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    print('Flutter Error: ${details.exception}');
+    print('Stack: ${details.stack}');
+  };
+  
   runApp(const BabyGrowthApp());
 }
 

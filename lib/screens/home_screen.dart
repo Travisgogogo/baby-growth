@@ -58,19 +58,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final babies = await DatabaseService.instance.getAllBabies();
-    if (babies.isNotEmpty) {
-      final baby = babies.first;
-      final babyId = baby.id;
-      if (babyId != null) {
-        setState(() {
-          _baby = baby;
-        });
-        await _loadBabyData(babyId);
+    try {
+      setState(() => _isLoading = true);
+      final babies = await DatabaseService.instance.getAllBabies();
+      if (babies.isNotEmpty) {
+        final baby = babies.first;
+        final babyId = baby.id;
+        if (babyId != null) {
+          setState(() {
+            _baby = baby;
+          });
+          await _loadBabyData(babyId);
+        }
       }
+    } catch (e, stackTrace) {
+      print('加载数据错误: $e');
+      print('Stack: $stackTrace');
+    } finally {
+      setState(() => _isLoading = false);
     }
-    setState(() => _isLoading = false);
   }
 
   Future<void> _loadBabyData(int babyId) async {
