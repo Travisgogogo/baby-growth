@@ -129,7 +129,6 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
                     ],
                   ),
                 ),
-                ),
     );
   }
 
