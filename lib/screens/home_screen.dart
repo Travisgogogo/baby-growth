@@ -40,10 +40,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // Android 检查更新
-    if (Platform.isAndroid) {
-      _checkUpdate();
-    }
+    // Android 检查更新 - 暂时禁用，可能导致闪退
+    // if (Platform.isAndroid) {
+    //   _checkUpdate();
+    // }
   }
 
   Future<void> _checkUpdate() async {
