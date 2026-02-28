@@ -20,6 +20,9 @@ dependencies:
   # 应用内更新
   package_info_plus: ^5.0.1
   permission_handler: ^11.3.0
+  
+  # HTTP 请求
+  http: ^1.1.0
 
 dev_dependencies:
   flutter_test:
