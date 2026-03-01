@@ -867,6 +867,21 @@ class DatabaseService {
     }
   }
 
+  Future<bool> deleteVaccineRecord(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'vaccine_records',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除疫苗记录失败: $e');
+      return false;
+    }
+  }
+
   Future<bool> close() async {
     try {
       final db = await database;
