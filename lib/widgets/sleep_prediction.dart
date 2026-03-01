@@ -24,20 +24,44 @@ class SleepPredictor {
   }) {
     if (recentRecords.isEmpty) return null;
 
-    // 获取最近一次睡眠
-    final lastSleep = recentRecords.first;
-    if (lastSleep.endTime == null) {
-      // 还在睡觉中
+    final now = DateTime.now();
+    
+    // 找到最近一次有结束时间的睡眠（按结束时间排序）
+    final completedSleeps = recentRecords
+        .where((r) => r.endTime != null)
+        .toList()
+      ..sort((a, b) => b.endTime!.compareTo(a.endTime!));
+    
+    // 检查是否正在睡觉（有未结束的最新记录）
+    final ongoingSleep = recentRecords
+        .where((r) => r.endTime == null)
+        .cast<SleepRecord?>()
+        .firstOrNull;
+    
+    if (ongoingSleep != null) {
+      // 正在睡觉中
+      final sleepDuration = now.difference(ongoingSleep.startTime);
       return SleepPrediction(
         status: SleepStatus.sleeping,
         message: '宝宝正在睡觉',
         nextSleepTime: null,
         minutesUntilSleepy: null,
+        progress: null,
+        standardWakeWindow: null,
+        awakeMinutes: null,
+        currentSleepDuration: sleepDuration.inMinutes,
       );
     }
 
-    // 计算已清醒时长
-    final now = DateTime.now();
+    if (completedSleeps.isEmpty) {
+      // 没有已完成的睡眠记录
+      return null;
+    }
+
+    // 获取最近一次完成的睡眠
+    final lastSleep = completedSleeps.first;
+    
+    // 计算已清醒时长（从上次醒来时间到现在）
     final awakeDuration = now.difference(lastSleep.endTime!);
     final awakeMinutes = awakeDuration.inMinutes;
 
@@ -51,10 +75,15 @@ class SleepPredictor {
     
     if (lastSleepDuration < 45) {
       // 短觉，下次提前睡
-      adjustedWindow -= 30;
-    } else if (lastSleepDuration > 90) {
-      // 长觉，下次可以晚一点
+      adjustedWindow = (adjustedWindow * 0.8).round(); // 缩短20%
+    } else if (lastSleepDuration > 120) {
+      // 长觉（超过2小时），下次可以晚一点
       adjustedWindow += 15;
+    }
+
+    // 确保最小清醒间隔（新生儿除外）
+    if (ageInMonths >= 3 && adjustedWindow < 60) {
+      adjustedWindow = 60;
     }
 
     // 计算距离困倦还有多久
@@ -63,10 +92,16 @@ class SleepPredictor {
     if (minutesUntilSleepy <= 0) {
       return SleepPrediction(
         status: SleepStatus.overdue,
-        message: '宝宝可能已经困了',
+        message: awakeMinutes > adjustedWindow + 30 
+            ? '宝宝已经困过头了，快哄睡吧' 
+            : '宝宝可能已经困了',
         nextSleepTime: now,
         minutesUntilSleepy: 0,
         progress: 1.0,
+        standardWakeWindow: standardWindow,
+        awakeMinutes: awakeMinutes,
+        lastSleepDuration: lastSleepDuration,
+        adjustedWindow: adjustedWindow,
       );
     }
 
@@ -80,12 +115,15 @@ class SleepPredictor {
     if (progress < 0.5) {
       status = SleepStatus.awake;
       message = '宝宝精神不错';
-    } else if (progress < 0.8) {
+    } else if (progress < 0.75) {
       status = SleepStatus.gettingSleepy;
       message = '开始有点困了';
-    } else {
+    } else if (progress < 0.9) {
       status = SleepStatus.sleepySoon;
       message = '很快就要困了';
+    } else {
+      status = SleepStatus.sleepySoon;
+      message = '该准备哄睡了';
     }
 
     return SleepPrediction(
@@ -96,6 +134,8 @@ class SleepPredictor {
       progress: progress.clamp(0.0, 1.0),
       standardWakeWindow: standardWindow,
       awakeMinutes: awakeMinutes,
+      lastSleepDuration: lastSleepDuration,
+      adjustedWindow: adjustedWindow,
     );
   }
 }
@@ -109,6 +149,9 @@ class SleepPrediction {
   final double? progress;
   final int? standardWakeWindow;
   final int? awakeMinutes;
+  final int? lastSleepDuration;
+  final int? adjustedWindow;
+  final int? currentSleepDuration;
 
   SleepPrediction({
     required this.status,
@@ -118,6 +161,9 @@ class SleepPrediction {
     this.progress,
     this.standardWakeWindow,
     this.awakeMinutes,
+    this.lastSleepDuration,
+    this.adjustedWindow,
+    this.currentSleepDuration,
   });
 
   /// 格式化显示时间
@@ -134,6 +180,17 @@ class SleepPrediction {
     if (minutesUntilSleepy! <= 0) return '现在';
     final hours = minutesUntilSleepy! ~/ 60;
     final mins = minutesUntilSleepy! % 60;
+    if (hours > 0) {
+      return '${hours}小时${mins}分钟';
+    }
+    return '${mins}分钟';
+  }
+  
+  /// 格式化当前睡眠时长
+  String get formattedCurrentSleep {
+    if (currentSleepDuration == null) return '';
+    final hours = currentSleepDuration! ~/ 60;
+    final mins = currentSleepDuration! % 60;
     if (hours > 0) {
       return '${hours}小时${mins}分钟';
     }
@@ -225,21 +282,36 @@ class SleepPredictionCard extends StatelessWidget {
   }
 
   Widget _buildSleepingView() {
-    return const Row(
+    return Row(
       children: [
-        Icon(
+        const Icon(
           Icons.bedtime,
           color: Colors.white,
           size: 48,
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         Expanded(
-          child: Text(
-            '宝宝正在睡觉，好好休息',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '宝宝正在睡觉，好好休息',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              if (prediction!.currentSleepDuration != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '已睡 ${prediction!.formattedCurrentSleep}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -311,7 +383,7 @@ class SleepPredictionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '已清醒 ${prediction!.awakeMinutes} 分钟 / 建议 ${prediction!.standardWakeWindow} 分钟',
+            _buildStatusText(),
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 11,
@@ -320,6 +392,32 @@ class SleepPredictionCard extends StatelessWidget {
         ],
       ],
     );
+  }
+  
+  String _buildStatusText() {
+    final awake = prediction!.awakeMinutes;
+    final standard = prediction!.standardWakeWindow;
+    final adjusted = prediction!.adjustedWindow;
+    final lastSleep = prediction!.lastSleepDuration;
+    
+    if (awake == null || standard == null) return '';
+    
+    String text = '已清醒 ${awake} 分钟';
+    
+    if (adjusted != null && adjusted != standard) {
+      text += ' / 建议 ${adjusted} 分钟';
+      if (lastSleep != null) {
+        if (lastSleep < 45) {
+          text += '（上次短觉，提前睡）';
+        } else if (lastSleep > 120) {
+          text += '（上次长觉，可延后）';
+        }
+      }
+    } else {
+      text += ' / 建议 ${standard} 分钟';
+    }
+    
+    return text;
   }
 
   LinearGradient _buildGradient() {
