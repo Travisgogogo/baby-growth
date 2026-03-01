@@ -74,7 +74,6 @@ class _BabyBirthDetailScreenState extends State<BabyBirthDetailScreen> {
       },
     );
   }
-  }
 
   /// 编辑文本字段
   void _editTextField(String title, String? currentValue, Function(String) onSave) {
