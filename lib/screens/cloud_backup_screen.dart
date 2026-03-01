@@ -186,19 +186,22 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_backup_time', DateTime.now().toIso8601String());
         await _loadSavedData();
-        await _loadBackupList(); // 刷新列表
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('备份成功：$fileName')),
           );
         }
+        
+        // 备份成功后刷新列表（在 setState 外调用）
+        await _loadBackupList();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('备份失败，请重试')),
           );
         }
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       if (mounted) {
@@ -206,7 +209,6 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
           SnackBar(content: Text('备份出错：$e')),
         );
       }
-    } finally {
       setState(() => _isLoading = false);
     }
   }

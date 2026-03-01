@@ -26,21 +26,14 @@ class SleepPredictor {
 
     final now = DateTime.now();
     
-    // 找到最近一次有结束时间的睡眠（按结束时间排序）
-    final completedSleeps = recentRecords
-        .where((r) => r.endTime != null)
-        .toList()
-      ..sort((a, b) => b.endTime!.compareTo(a.endTime!));
+    // recentRecords 已经按 startTime DESC 排序（数据库查询时指定）
+    // 最新的记录是第一个
+    final latestRecord = recentRecords.first;
     
-    // 检查是否正在睡觉（有未结束的最新记录）
-    final ongoingSleep = recentRecords
-        .where((r) => r.endTime == null)
-        .cast<SleepRecord?>()
-        .firstOrNull;
-    
-    if (ongoingSleep != null) {
+    // 检查是否正在睡觉（最新的记录没有结束时间）
+    if (latestRecord.endTime == null) {
       // 正在睡觉中
-      final sleepDuration = now.difference(ongoingSleep.startTime);
+      final sleepDuration = now.difference(latestRecord.startTime);
       return SleepPrediction(
         status: SleepStatus.sleeping,
         message: '宝宝正在睡觉',
@@ -52,6 +45,12 @@ class SleepPredictor {
         currentSleepDuration: sleepDuration.inMinutes,
       );
     }
+
+    // 找到最近一次有结束时间的睡眠（按结束时间排序，找最新的）
+    final completedSleeps = recentRecords
+        .where((r) => r.endTime != null)
+        .toList()
+      ..sort((a, b) => b.endTime!.compareTo(a.endTime!));
 
     if (completedSleeps.isEmpty) {
       // 没有已完成的睡眠记录
