@@ -7,6 +7,7 @@ import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
+import '../utils/image_storage_util.dart';
 
 /// 里程碑详情/记录页面
 class MilestoneDetailScreen extends StatefulWidget {
@@ -64,7 +65,14 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       );
       
       if (image != null) {
-        setState(() => _photoPath = image.path);
+        // 保存到永久存储目录
+        final permanentPath = await ImageStorageUtil.saveImagePermanently(image.path);
+        if (permanentPath != null) {
+          setState(() => _photoPath = permanentPath);
+        } else {
+          // 如果保存失败，使用临时路径
+          setState(() => _photoPath = image.path);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -85,7 +93,14 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       );
       
       if (photo != null) {
-        setState(() => _photoPath = photo.path);
+        // 保存到永久存储目录
+        final permanentPath = await ImageStorageUtil.saveImagePermanently(photo.path);
+        if (permanentPath != null) {
+          setState(() => _photoPath = permanentPath);
+        } else {
+          // 如果保存失败，使用临时路径
+          setState(() => _photoPath = photo.path);
+        }
       }
     } catch (e) {
       if (mounted) {

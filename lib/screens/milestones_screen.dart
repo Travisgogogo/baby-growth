@@ -111,10 +111,14 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
     if (_baby == null) return;
 
     // 查找已有的记录
-    final existingRecord = _completedRecords.firstWhere(
-      (r) => r.milestoneId == milestone.id,
-      orElse: () => null as MilestoneRecord,
-    );
+    MilestoneRecord? existingRecord;
+    try {
+      existingRecord = _completedRecords.firstWhere(
+        (r) => r.milestoneId == milestone.id,
+      );
+    } catch (e) {
+      existingRecord = null;
+    }
 
     await Navigator.push(
       context,
@@ -123,7 +127,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
           milestone: milestone,
           baby: _baby!,
           isCompleted: _isMilestoneCompleted(milestone.id),
-          existingRecord: existingRecord.id != null ? existingRecord : null,
+          existingRecord: existingRecord,
         ),
       ),
     );
