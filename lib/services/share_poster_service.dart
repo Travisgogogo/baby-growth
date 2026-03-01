@@ -4,85 +4,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../constants/app_theme.dart';
+import '../constants/milestone_data.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/milestone.dart';
-import '../constants/app_theme.dart';
-import '../constants/milestone_data.dart';
 
 /// 成长海报生成服务
 class SharePosterService {
   /// 生成成长海报并返回文件
+  /// 使用传入的 GlobalKey 捕获 Widget 图片
   static Future<File?> generateGrowthPoster({
-    required Baby baby,
-    GrowthRecord? latestGrowth,
-    List<MilestoneRecord> milestones = const [],
-    String template = 'default',
+    required GlobalKey repaintKey,
   }) async {
     try {
-      // 创建海报 Widget
-      final posterWidget = GrowthPosterWidget(
-        baby: baby,
-        latestGrowth: latestGrowth,
-        milestones: milestones,
-        template: template,
-      );
-
-      // 渲染为图片
-      final imageBytes = await _renderWidgetToImage(posterWidget);
-      if (imageBytes == null) return null;
-
+      // 等待渲染完成
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      final renderObject = repaintKey.currentContext?.findRenderObject();
+      if (renderObject == null) {
+        print('错误: 无法找到 RenderObject');
+        return null;
+      }
+      
+      final boundary = renderObject as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData == null) {
+        print('错误: 无法获取图片数据');
+        return null;
+      }
+      
+      final imageBytes = byteData.buffer.asUint8List();
+      
       // 保存到临时文件
       final tempDir = await getTemporaryDirectory();
       final fileName = 'growth_poster_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(imageBytes);
-
+      
+      print('海报生成成功: ${file.path}');
       return file;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('生成海报失败: $e');
+      print('堆栈: $stackTrace');
       return null;
     }
-  }
-
-  /// 将 Widget 渲染为图片
-  static Future<Uint8List?> _renderWidgetToImage(Widget widget) async {
-    final repaintBoundary = RenderRepaintBoundary();
-    
-    final renderView = RenderView(
-      view: ui.PlatformDispatcher.instance.views.first,
-      configuration: ViewConfiguration(
-        physicalConstraints: BoxConstraints.tight(const Size(1080, 1920)),
-        devicePixelRatio: 2.0,
-      ),
-      child: repaintBoundary,
-    );
-
-    final pipelineOwner = PipelineOwner();
-    pipelineOwner.rootNode = renderView;
-    renderView.prepareInitialFrame();
-
-    final buildOwner = BuildOwner(focusManager: FocusManager());
-    
-    final element = RenderObjectToWidgetAdapter(
-      container: repaintBoundary,
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: widget,
-      ),
-    ).attachToRenderTree(buildOwner);
-
-    buildOwner.buildScope(element);
-    buildOwner.finalizeTree();
-
-    pipelineOwner.flushLayout();
-    pipelineOwner.flushCompositingBits();
-    pipelineOwner.flushPaint();
-
-    final image = await repaintBoundary.toImage(pixelRatio: 2.0);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    
-    return byteData?.buffer.asUint8List();
   }
 }
 

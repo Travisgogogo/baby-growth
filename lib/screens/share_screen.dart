@@ -25,6 +25,7 @@ class _ShareScreenState extends State<ShareScreen> {
   bool _isGenerating = false;
   File? _generatedPoster;
   String _selectedTemplate = 'default';
+  final GlobalKey _posterKey = GlobalKey();
 
   final List<_TemplateItem> _templates = [
     _TemplateItem('default', '默认', [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)]),
@@ -40,44 +41,45 @@ class _ShareScreenState extends State<ShareScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     final babies = await DatabaseService.instance.getAllBabies();
     if (babies.isNotEmpty) {
       final baby = babies.first;
       final babyId = baby.id;
       if (babyId != null) {
         setState(() => _baby = baby);
-        
+
         final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
         if (growthRecords.isNotEmpty) {
           setState(() => _latestGrowth = growthRecords.first);
         }
-        
+
         final milestones = await DatabaseService.instance.getMilestoneRecords(babyId);
         setState(() => _milestones = milestones);
       }
     }
-    
+
     setState(() => _isLoading = false);
   }
 
   Future<void> _generatePoster() async {
     if (_baby == null) return;
-    
+
     setState(() => _isGenerating = true);
-    
+
     try {
       final poster = await SharePosterService.generateGrowthPoster(
-        baby: _baby!,
-        latestGrowth: _latestGrowth,
-        milestones: _milestones,
-        template: _selectedTemplate,
+        repaintKey: _posterKey,
       );
-      
+
       setState(() => _generatedPoster = poster);
-      
+
       if (poster != null && mounted) {
         _showPosterPreview(poster);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('生成海报失败，请重试')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -221,22 +223,39 @@ class _ShareScreenState extends State<ShareScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _baby == null
               ? _buildEmptyState()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionTitle('选择模板'),
-                      const SizedBox(height: 12),
-                      _buildPosterTemplates(),
-                      const SizedBox(height: 32),
-                      _buildGenerateButton(),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('时光轴回顾'),
-                      const SizedBox(height: 12),
-                      _buildTimelineCard(),
-                    ],
-                  ),
+              : Stack(
+                  children: [
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle('选择模板'),
+                          const SizedBox(height: 12),
+                          _buildPosterTemplates(),
+                          const SizedBox(height: 32),
+                          _buildGenerateButton(),
+                          const SizedBox(height: 32),
+                          _buildSectionTitle('时光轴回顾'),
+                          const SizedBox(height: 12),
+                          _buildTimelineCard(),
+                        ],
+                      ),
+                    ),
+                    // 隐藏的海报 Widget，用于生成图片
+                    Positioned(
+                      left: -9999,
+                      child: RepaintBoundary(
+                        key: _posterKey,
+                        child: GrowthPosterWidget(
+                          baby: _baby!,
+                          latestGrowth: _latestGrowth,
+                          milestones: _milestones,
+                          template: _selectedTemplate,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
