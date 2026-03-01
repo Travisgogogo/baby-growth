@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../services/update_service.dart';
 import 'share_screen.dart';
 import 'cloud_backup_screen.dart';
+import 'baby_birth_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -534,6 +535,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(
             delay: const Duration(milliseconds: 100),
+            child: _buildSectionTitle('宝宝信息'),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 150),
+            child: _buildMenuItem(Icons.child_care, '出生信息', () {
+              if (_baby != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BabyBirthDetailScreen(baby: _baby!),
+                  ),
+                ).then((_) => _loadData()); // 返回后刷新数据
+              }
+            }),
+          ),
+          const SizedBox(height: AppDimensions.paddingLarge),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 200),
             child: _buildSectionTitle('数据管理'),
           ),
           FadeInAnimation(

@@ -31,7 +31,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -47,7 +47,15 @@ class DatabaseService {
         birthWeight REAL,
         birthHeight REAL,
         birthHeadCircumference REAL,
-        avatarPath TEXT
+        avatarPath TEXT,
+        birthTime TEXT,
+        birthPlace TEXT,
+        gestationalAge TEXT,
+        deliveryMode TEXT,
+        bloodType TEXT,
+        birthPhotoPath TEXT,
+        handprintPath TEXT,
+        footprintPath TEXT
       )
     ''');
 
@@ -219,6 +227,18 @@ class DatabaseService {
     if (oldVersion < 3) {
       // 添加宝宝头像字段
       await db.execute('ALTER TABLE babies ADD COLUMN avatarPath TEXT');
+    }
+    
+    if (oldVersion < 4) {
+      // 添加宝宝详细信息字段
+      await db.execute('ALTER TABLE babies ADD COLUMN birthTime TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN birthPlace TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN gestationalAge TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN deliveryMode TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN bloodType TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN birthPhotoPath TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN handprintPath TEXT');
+      await db.execute('ALTER TABLE babies ADD COLUMN footprintPath TEXT');
     }
   }
 
