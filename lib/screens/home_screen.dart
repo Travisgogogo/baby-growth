@@ -67,21 +67,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadBabyData(int babyId) async {
-    final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
-    final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
-    final sleepRecords = await DatabaseService.instance.getSleepRecords(babyId);
-    final diaperRecords = await DatabaseService.instance.getDiaperRecords(babyId);
-    final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
+    try {
+      final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
+      final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
+      final sleepRecords = await DatabaseService.instance.getSleepRecords(babyId);
+      final diaperRecords = await DatabaseService.instance.getDiaperRecords(babyId);
+      final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
 
-    setState(() {
-      if (growthRecords.isNotEmpty) {
-        _latestGrowth = growthRecords.first;
+      if (mounted) {
+        setState(() {
+          if (growthRecords.isNotEmpty) {
+            _latestGrowth = growthRecords.first;
+          }
+          _recentFeeds = feedRecords;
+          _recentSleeps = sleepRecords;
+          _recentDiapers = diaperRecords;
+          _milestoneRecords = milestoneRecords;
+        });
       }
-      _recentFeeds = feedRecords;
-      _recentSleeps = sleepRecords;
-      _recentDiapers = diaperRecords;
-      _milestoneRecords = milestoneRecords;
-    });
+    } catch (e, stackTrace) {
+      print('加载宝宝数据错误: $e');
+      print('Stack: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载数据失败: $e')),
+        );
+      }
+    }
   }
 
   @override
