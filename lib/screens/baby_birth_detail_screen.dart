@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../services/database_service.dart';
+import '../utils/date_time_util.dart';
+import '../utils/image_picker_util.dart';
 import '../widgets/animations.dart';
 
 /// 宝宝出生信息详情页面
@@ -18,7 +19,6 @@ class BabyBirthDetailScreen extends StatefulWidget {
 
 class _BabyBirthDetailScreenState extends State<BabyBirthDetailScreen> {
   late Baby _baby;
-  final ImagePicker _imagePicker = ImagePicker();
   bool _isLoading = false;
 
   @override
@@ -51,102 +51,29 @@ class _BabyBirthDetailScreenState extends State<BabyBirthDetailScreen> {
   }
 
   /// 选择或拍照
-  Future<void> _pickImage(ImageSource source, String type) async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
-      
-      if (image != null) {
+  Future<void> _pickImage(String type, String title) async {
+    await ImagePickerUtil.showPickerOptions(
+      context,
+      title: title,
+      onImageSelected: (path) async {
         Baby updatedBaby;
         switch (type) {
           case 'birthPhoto':
-            updatedBaby = _baby.copyWith(birthPhotoPath: image.path);
+            updatedBaby = _baby.copyWith(birthPhotoPath: path);
             break;
           case 'handprint':
-            updatedBaby = _baby.copyWith(handprintPath: image.path);
+            updatedBaby = _baby.copyWith(handprintPath: path);
             break;
           case 'footprint':
-            updatedBaby = _baby.copyWith(footprintPath: image.path);
+            updatedBaby = _baby.copyWith(footprintPath: path);
             break;
           default:
             return;
         }
         await _updateBaby(updatedBaby);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择图片失败: $e')),
-        );
-      }
-    }
-  }
-
-  /// 显示图片选择对话框
-  void _showImagePicker(String type, String title) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(title, style: AppTextStyles.subtitle),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.camera_alt, color: AppColors.primary),
-                ),
-                title: const Text('拍照'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.camera, type);
-                },
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.photo_library, color: AppColors.primary),
-                ),
-                title: const Text('从相册选择'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.gallery, type);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+      },
     );
+  }
   }
 
   /// 编辑文本字段
@@ -306,21 +233,21 @@ class _BabyBirthDetailScreenState extends State<BabyBirthDetailScreen> {
                   '出生照片',
                   _baby.birthPhotoPath,
                   Icons.child_care,
-                  () => _showImagePicker('birthPhoto', '选择出生照片'),
+                  () => _pickImage('birthPhoto', '选择出生照片'),
                 ),
                 const SizedBox(height: 12),
                 _buildPhotoCard(
                   '小手印',
                   _baby.handprintPath,
                   Icons.pan_tool,
-                  () => _showImagePicker('handprint', '选择小手印照片'),
+                  () => _pickImage('handprint', '选择小手印照片'),
                 ),
                 const SizedBox(height: 12),
                 _buildPhotoCard(
                   '小脚印',
                   _baby.footprintPath,
                   Icons.directions_walk,
-                  () => _showImagePicker('footprint', '选择小脚印照片'),
+                  () => _pickImage('footprint', '选择小脚印照片'),
                 ),
               ],
             ),
@@ -329,9 +256,7 @@ class _BabyBirthDetailScreenState extends State<BabyBirthDetailScreen> {
 
   String _formatBirthTime() {
     if (_baby.birthTime == null) return '未设置';
-    final hour = _baby.birthTime!.hour.toString().padLeft(2, '0');
-    final minute = _baby.birthTime!.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    return DateTimeUtil.formatTime(_baby.birthTime!);
   }
 
   Widget _buildSectionTitle(String title) {

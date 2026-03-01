@@ -221,31 +221,36 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
   
   /// 导出所有数据
   Future<Map<String, dynamic>> _exportAllData() async {
-    final db = await DatabaseService.instance.database;
-    
-    final babies = await db.query('babies');
-    final growthRecords = await db.query('growth_records');
-    final feedRecords = await db.query('feed_records');
-    final sleepRecords = await db.query('sleep_records');
-    final diaperRecords = await db.query('diaper_records');
-    final milestones = await db.query('milestone_records');
-    final photos = await db.query('photos');
-    final illnessRecords = await db.query('illness_records');
-    final vaccineRecords = await db.query('vaccine_records');
-    
-    return {
-      'version': 1,
-      'exportTime': DateTime.now().toIso8601String(),
-      'babies': babies,
-      'growth_records': growthRecords,
-      'feed_records': feedRecords,
-      'sleep_records': sleepRecords,
-      'diaper_records': diaperRecords,
-      'milestones': milestones,
-      'photos': photos,
-      'illness_records': illnessRecords,
-      'vaccine_records': vaccineRecords,
-    };
+    try {
+      final db = await DatabaseService.instance.database;
+
+      final babies = await db.query('babies');
+      final growthRecords = await db.query('growth_records');
+      final feedRecords = await db.query('feed_records');
+      final sleepRecords = await db.query('sleep_records');
+      final diaperRecords = await db.query('diaper_records');
+      final milestones = await db.query('milestone_records');
+      final photos = await db.query('photos');
+      final illnessRecords = await db.query('illness_records');
+      final vaccineRecords = await db.query('vaccine_records');
+
+      return {
+        'version': 1,
+        'exportTime': DateTime.now().toIso8601String(),
+        'babies': babies,
+        'growth_records': growthRecords,
+        'feed_records': feedRecords,
+        'sleep_records': sleepRecords,
+        'diaper_records': diaperRecords,
+        'milestones': milestones,
+        'photos': photos,
+        'illness_records': illnessRecords,
+        'vaccine_records': vaccineRecords,
+      };
+    } catch (e) {
+      print('导出数据失败: $e');
+      throw Exception('导出数据失败: $e');
+    }
   }
   
   /// 从云端恢复数据

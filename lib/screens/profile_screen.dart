@@ -11,6 +11,7 @@ import '../services/update_service.dart';
 import 'share_screen.dart';
 import 'cloud_backup_screen.dart';
 import 'baby_birth_detail_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -592,6 +593,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 400),
+            child: _buildMenuItem(Icons.privacy_tip, '隐私政策', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              );
+            }),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 450),
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
