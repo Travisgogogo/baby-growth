@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
+import '../constants/sleep_prediction_config.dart';
 import '../models/baby.dart';
 import '../models/sleep_record.dart';
 
@@ -7,14 +8,7 @@ import '../models/sleep_record.dart';
 class SleepPredictor {
   /// 根据月龄获取标准清醒间隔（分钟）
   static int getStandardWakeWindow(int ageInMonths) {
-    if (ageInMonths < 1) return 45;      // 新生儿
-    if (ageInMonths < 3) return 60;      // 1-2个月
-    if (ageInMonths < 5) return 90;      // 3-4个月
-    if (ageInMonths < 7) return 120;     // 5-6个月
-    if (ageInMonths < 10) return 180;    // 7-9个月
-    if (ageInMonths < 14) return 240;    // 10-13个月
-    if (ageInMonths < 20) return 300;    // 14-19个月
-    return 360;                           // 20个月以上
+    return SleepPredictionConfig.getWakeWindowForAge(ageInMonths);
   }
 
   /// 预测下次入睡时间
@@ -25,11 +19,11 @@ class SleepPredictor {
     if (recentRecords.isEmpty) return null;
 
     final now = DateTime.now();
-    
+
     // recentRecords 已经按 startTime DESC 排序（数据库查询时指定）
     // 最新的记录是第一个
     final latestRecord = recentRecords.first;
-    
+
     // 检查是否正在睡觉（最新的记录没有结束时间）
     if (latestRecord.endTime == null) {
       // 正在睡觉中
@@ -59,7 +53,7 @@ class SleepPredictor {
 
     // 获取最近一次完成的睡眠
     final lastSleep = completedSleeps.first;
-    
+
     // 计算已清醒时长（从上次醒来时间到现在）
     final awakeDuration = now.difference(lastSleep.endTime!);
     final awakeMinutes = awakeDuration.inMinutes;
@@ -71,18 +65,18 @@ class SleepPredictor {
     // 根据上次睡眠时长修正
     final lastSleepDuration = lastSleep.endTime!.difference(lastSleep.startTime).inMinutes;
     int adjustedWindow = standardWindow;
-    
-    if (lastSleepDuration < 45) {
+
+    if (lastSleepDuration < SleepPredictionConfig.shortNapThreshold) {
       // 短觉，下次提前睡
-      adjustedWindow = (adjustedWindow * 0.8).round(); // 缩短20%
-    } else if (lastSleepDuration > 120) {
+      adjustedWindow = (adjustedWindow * SleepPredictionConfig.shortNapAdjustment).round();
+    } else if (lastSleepDuration > SleepPredictionConfig.longNapThreshold) {
       // 长觉（超过2小时），下次可以晚一点
-      adjustedWindow += 15;
+      adjustedWindow += SleepPredictionConfig.longNapAdjustment;
     }
 
     // 确保最小清醒间隔（新生儿除外）
-    if (ageInMonths >= 3 && adjustedWindow < 60) {
-      adjustedWindow = 60;
+    if (ageInMonths >= 3 && adjustedWindow < SleepPredictionConfig.minWakeWindow) {
+      adjustedWindow = SleepPredictionConfig.minWakeWindow;
     }
 
     // 计算距离困倦还有多久
@@ -91,8 +85,8 @@ class SleepPredictor {
     if (minutesUntilSleepy <= 0) {
       return SleepPrediction(
         status: SleepStatus.overdue,
-        message: awakeMinutes > adjustedWindow + 30 
-            ? '宝宝已经困过头了，快哄睡吧' 
+        message: awakeMinutes > adjustedWindow + SleepPredictionConfig.overdueThreshold
+            ? '宝宝已经困过头了，快哄睡吧'
             : '宝宝可能已经困了',
         nextSleepTime: now,
         minutesUntilSleepy: 0,
@@ -110,14 +104,14 @@ class SleepPredictor {
     // 生成状态消息
     String message;
     SleepStatus status;
-    
-    if (progress < 0.5) {
+
+    if (progress < SleepPredictionConfig.awakeThreshold) {
       status = SleepStatus.awake;
       message = '宝宝精神不错';
-    } else if (progress < 0.75) {
+    } else if (progress < SleepPredictionConfig.gettingSleepyThreshold) {
       status = SleepStatus.gettingSleepy;
       message = '开始有点困了';
-    } else if (progress < 0.9) {
+    } else if (progress < SleepPredictionConfig.sleepySoonThreshold) {
       status = SleepStatus.sleepySoon;
       message = '很快就要困了';
     } else {
@@ -184,7 +178,7 @@ class SleepPrediction {
     }
     return '${mins}分钟';
   }
-  
+
   /// 格式化当前睡眠时长
   String get formattedCurrentSleep {
     if (currentSleepDuration == null) return '';
@@ -392,17 +386,17 @@ class SleepPredictionCard extends StatelessWidget {
       ],
     );
   }
-  
+
   String _buildStatusText() {
     final awake = prediction!.awakeMinutes;
     final standard = prediction!.standardWakeWindow;
     final adjusted = prediction!.adjustedWindow;
     final lastSleep = prediction!.lastSleepDuration;
-    
+
     if (awake == null || standard == null) return '';
-    
+
     String text = '已清醒 ${awake} 分钟';
-    
+
     if (adjusted != null && adjusted != standard) {
       text += ' / 建议 ${adjusted} 分钟';
       if (lastSleep != null) {
@@ -415,7 +409,7 @@ class SleepPredictionCard extends StatelessWidget {
     } else {
       text += ' / 建议 ${standard} 分钟';
     }
-    
+
     return text;
   }
 
