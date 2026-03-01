@@ -174,7 +174,7 @@ class _ShareScreenState extends State<ShareScreen> {
 
   Future<void> _savePoster(File posterFile) async {
     try {
-      // 使用 share_plus 保存到相册
+      // 使用 share_plus 分享
       await Share.shareXFiles(
         [XFile(posterFile.path)],
         text: '${_baby?.name}的成长记录',
