@@ -41,21 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // Android 检查更新
-    if (Platform.isAndroid) {
-      _checkUpdate();
-    }
-  }
-
-  Future<void> _checkUpdate() async {
-    // 延迟检查，避免启动时卡顿
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
-
-    final updateInfo = await UpdateService.checkUpdate();
-    if (updateInfo != null && updateInfo.hasUpdate && mounted) {
-      UpdateDialog.show(context, updateInfo);
-    }
+    // 移除自动检查更新，改为在"我的"页面手动检查
   }
 
   Future<void> _loadData() async {

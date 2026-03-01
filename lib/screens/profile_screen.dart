@@ -7,6 +7,7 @@ import '../widgets/animations.dart';
 import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
+import '../services/update_service.dart';
 import 'share_screen.dart';
 import 'cloud_backup_screen.dart';
 
@@ -460,6 +461,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// 检查更新
+  Future<void> _checkUpdate() async {
+    if (!Platform.isAndroid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('仅 Android 支持检查更新')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在检查更新...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final updateInfo = await UpdateService.checkUpdate();
+      Navigator.pop(context);
+
+      if (!mounted) return;
+
+      if (updateInfo != null && updateInfo.hasUpdate) {
+        UpdateDialog.show(context, updateInfo);
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('已是最新版本'),
+            content: const Text('当前已经是最新版本，无需更新。'),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('检查更新失败: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -508,10 +565,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(
             delay: const Duration(milliseconds: 300),
-            child: _buildSectionTitle('关于'),
+            child: _buildSectionTitle('应用'),
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 350),
+            child: _buildMenuItem(Icons.system_update, '检查更新', _checkUpdate),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 400),
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
