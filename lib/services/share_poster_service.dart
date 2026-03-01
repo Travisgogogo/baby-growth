@@ -8,6 +8,7 @@ import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/milestone.dart';
 import '../constants/app_theme.dart';
+import '../constants/milestone_data.dart';
 
 /// 成长海报生成服务
 class SharePosterService {
@@ -49,9 +50,9 @@ class SharePosterService {
     final repaintBoundary = RenderRepaintBoundary();
     
     final renderView = RenderView(
-      window: ui.PlatformDispatcher.instance.views.first,
+      view: ui.PlatformDispatcher.instance.views.first,
       configuration: ViewConfiguration(
-        size: const Size(1080, 1920),
+        physicalConstraints: BoxConstraints.tight(const Size(1080, 1920)),
         devicePixelRatio: 2.0,
       ),
       child: repaintBoundary,
@@ -311,7 +312,8 @@ class GrowthPosterWidget extends StatelessWidget {
   }
 
   Widget _buildMilestones() {
-    final recentMilestones = milestones.where((m) => m.isCompleted).take(3).toList();
+    // MilestoneRecord 有 completedDate 就表示已完成
+    final recentMilestones = milestones.where((m) => m.completedDate != null).take(3).toList();
     if (recentMilestones.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -340,6 +342,10 @@ class GrowthPosterWidget extends StatelessWidget {
   }
 
   Widget _buildMilestoneItem(MilestoneRecord milestone) {
+    // 从 MilestoneData 获取里程碑标题
+    final milestoneData = MilestoneData.getMilestoneById(milestone.milestoneId);
+    final title = milestoneData?.title ?? '里程碑';
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -360,7 +366,7 @@ class GrowthPosterWidget extends StatelessWidget {
           const SizedBox(width: 20),
           Expanded(
             child: Text(
-              milestone.title,
+              title,
               style: const TextStyle(
                 fontSize: 28,
                 color: Color(0xFF333333),
