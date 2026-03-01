@@ -131,6 +131,86 @@ class NutstoreService {
       return false;
     }
   }
+  
+  /// 列出备份文件
+  Future<List<Map<String, dynamic>>> listBackupFiles() async {
+    if (!isAuthenticated) return [];
+    
+    try {
+      final client = http.Client();
+      final request = http.Request('PROPFIND', Uri.parse('$_baseUrl/baby-growth-backup/'));
+      request.headers.addAll({
+        ..._getAuthHeaders(),
+        'Depth': '1',
+      });
+      
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 10));
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 207) {
+        // 解析 WebDAV 响应
+        return _parseWebDAVResponse(response.body);
+      }
+      return [];
+    } catch (e) {
+      print('列出文件失败: $e');
+      return [];
+    }
+  }
+  
+  /// 解析 WebDAV PROPFIND 响应
+  List<Map<String, dynamic>> _parseWebDAVResponse(String xmlBody) {
+    final files = <Map<String, dynamic>>[];
+    
+    // 简单的正则解析，提取文件名和修改时间
+    final responseRegex = RegExp(r'<response>(.*?)</response>', dotAll: true);
+    final hrefRegex = RegExp(r'<href>(.*?)</href>');
+    final displayNameRegex = RegExp(r'<displayname>(.*?)</displayname>');
+    final lastModifiedRegex = RegExp(r'<getlastmodified>(.*?)</getlastmodified>');
+    final contentLengthRegex = RegExp(r'<getcontentlength>(.*?)</getcontentlength>');
+    
+    for (final match in responseRegex.allMatches(xmlBody)) {
+      final responseBlock = match.group(1) ?? '';
+      final href = hrefRegex.firstMatch(responseBlock)?.group(1) ?? '';
+      final displayName = displayNameRegex.firstMatch(responseBlock)?.group(1) ?? '';
+      final lastModified = lastModifiedRegex.firstMatch(responseBlock)?.group(1) ?? '';
+      final contentLength = contentLengthRegex.firstMatch(responseBlock)?.group(1) ?? '0';
+      
+      // 跳过目录本身
+      if (displayName.isEmpty || displayName == 'baby-growth-backup') continue;
+      
+      files.add({
+        'href': href,
+        'name': displayName,
+        'lastModified': lastModified,
+        'size': int.tryParse(contentLength) ?? 0,
+      });
+    }
+    
+    // 按修改时间倒序排列
+    files.sort((a, b) => (b['lastModified'] ?? '').compareTo(a['lastModified'] ?? ''));
+    
+    return files;
+  }
+  
+  /// 删除文件
+  Future<bool> deleteFile(String remotePath) async {
+    if (!isAuthenticated) return false;
+    
+    try {
+      final client = http.Client();
+      final request = http.Request('DELETE', Uri.parse('$_baseUrl/baby-growth-backup/$remotePath'));
+      request.headers.addAll(_getAuthHeaders());
+      
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      return response.statusCode == 204 || response.statusCode == 200;
+    } catch (e) {
+      print('删除文件失败: $e');
+      return false;
+    }
+  }
 }
 
 /// 单例实例
