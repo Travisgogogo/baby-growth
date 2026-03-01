@@ -538,6 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,6 +622,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,6 +750,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const MilestonesScreen()),
       ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
