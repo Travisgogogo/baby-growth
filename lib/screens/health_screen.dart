@@ -611,13 +611,26 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   },
                 ),
                 if (endTime != null)
-                  TextButton(
-                    onPressed: () {
-                      setDialogState(() {
-                        endTime = null;
-                      });
-                    },
-                    child: const Text('标记为进行中'),
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          endTime = null;
+                        });
+                      },
+                      icon: const Icon(Icons.play_arrow, color: Colors.white),
+                      label: const Text('标记为进行中', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -635,11 +648,10 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   description: descController.text,
                   treatment: treatmentController.text,
                   startTime: startTime,
-                  endTime: endTime,  // 这个值可能为 null（进行中状态）
+                  endTime: endTime,
+                  clearEndTime: endTime == null, // 当 endTime 为 null 时清除
                 );
-                print('更新疾病记录: id=${updated.id}, endTime=${updated.endTime}'); // 调试
                 final result = await DatabaseService.instance.updateIllnessRecord(updated);
-                print('更新结果: $result'); // 调试
                 Navigator.pop(context);
                 await _loadData();
                 if (mounted) {
