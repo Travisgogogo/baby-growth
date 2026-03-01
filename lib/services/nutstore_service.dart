@@ -163,11 +163,13 @@ class NutstoreService {
     final files = <Map<String, dynamic>>[];
     
     // 简单的正则解析，提取文件名和修改时间
-    final responseRegex = RegExp(r'<response>(.*?)</response>', dotAll: true);
-    final hrefRegex = RegExp(r'<href>(.*?)</href>');
-    final displayNameRegex = RegExp(r'<displayname>(.*?)</displayname>');
-    final lastModifiedRegex = RegExp(r'<getlastmodified>(.*?)</getlastmodified>');
-    final contentLengthRegex = RegExp(r'<getcontentlength>(.*?)</getcontentlength>');
+    // 处理可能的 XML 命名空间前缀 (如 <d:response> 或 <response>)
+    final responseRegex = RegExp(r'<[^>]*response[^>]*>(.*?)</[^>]*response>', dotAll: true);
+    final hrefRegex = RegExp(r'<[^>]*href[^>]*>(.*?)</[^>]*href>');
+    final displayNameRegex = RegExp(r'<[^>]*displayname[^>]*>(.*?)</[^>]*displayname>');
+    final lastModifiedRegex = RegExp(r'<[^>]*getlastmodified[^>]*>(.*?)</[^>]*getlastmodified>');
+    final contentLengthRegex = RegExp(r'<[^>]*getcontentlength[^>]*>(.*?)</[^>]*getcontentlength>');
+    final resourceTypeRegex = RegExp(r'<[^>]*resourcetype[^>]*>(.*?)</[^>]*resourcetype>', dotAll: true);
     
     for (final match in responseRegex.allMatches(xmlBody)) {
       final responseBlock = match.group(1) ?? '';
@@ -175,9 +177,13 @@ class NutstoreService {
       final displayName = displayNameRegex.firstMatch(responseBlock)?.group(1) ?? '';
       final lastModified = lastModifiedRegex.firstMatch(responseBlock)?.group(1) ?? '';
       final contentLength = contentLengthRegex.firstMatch(responseBlock)?.group(1) ?? '0';
+      final resourceType = resourceTypeRegex.firstMatch(responseBlock)?.group(1) ?? '';
       
-      // 跳过目录本身
-      if (displayName.isEmpty || displayName == 'baby-growth-backup') continue;
+      // 跳过目录（collection）
+      if (resourceType.contains('collection') || 
+          displayName.isEmpty || 
+          displayName == 'baby-growth-backup' ||
+          href.endsWith('/')) continue;
       
       files.add({
         'href': href,

@@ -193,15 +193,18 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
           );
         }
         
-        // 备份成功后刷新列表（在 setState 外调用）
-        await _loadBackupList();
+        // 备份成功后刷新列表
+        try {
+          await _loadBackupList();
+        } catch (e) {
+          print('刷新备份列表失败: $e');
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('备份失败，请重试')),
           );
         }
-        setState(() => _isLoading = false);
       }
     } catch (e) {
       if (mounted) {
@@ -209,7 +212,10 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
           SnackBar(content: Text('备份出错：$e')),
         );
       }
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
   
