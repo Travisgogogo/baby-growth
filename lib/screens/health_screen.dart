@@ -188,12 +188,7 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                 _buildIllnessTab(),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddIllnessDialog,
-        backgroundColor: AppColors.primary,
-        elevation: 4,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -274,55 +269,58 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium, vertical: 4),
-          leading: AnimatedContainer(
-            duration: AppAnimations.normal,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: v.completed ? AppColors.success.withOpacity(0.1) : AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        child: InkWell(
+          onLongPress: () => _showVaccineOptions(v),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMedium, vertical: 4),
+            leading: AnimatedContainer(
+              duration: AppAnimations.normal,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: v.completed ? AppColors.success.withOpacity(0.1) : AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              ),
+              child: Icon(
+                v.completed ? Icons.check_circle : Icons.circle_outlined,
+                color: v.completed ? AppColors.success : AppColors.textTertiary,
+              ),
             ),
-            child: Icon(
-              v.completed ? Icons.check_circle : Icons.circle_outlined,
-              color: v.completed ? AppColors.success : AppColors.textTertiary,
+            title: Text(
+              v.name,
+              style: AppTextStyles.body.copyWith(
+                decoration: v.completed ? TextDecoration.lineThrough : null,
+                color: v.completed ? AppColors.textTertiary : AppColors.textPrimary,
+              ),
             ),
+            subtitle: Text(v.scheduledTime, style: AppTextStyles.caption),
+            trailing: v.completed
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${v.completedDate?.month}月${v.completedDate?.day}日',
+                        style: AppTextStyles.caption,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                        onPressed: () => _editVaccineRecord(v),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () => _markVaccineCompleted(v),
+                        child: const Text('标记完成'),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
+                        onPressed: () => _editVaccineRecord(v),
+                      ),
+                    ],
+                  ),
           ),
-          title: Text(
-            v.name,
-            style: AppTextStyles.body.copyWith(
-              decoration: v.completed ? TextDecoration.lineThrough : null,
-              color: v.completed ? AppColors.textTertiary : AppColors.textPrimary,
-            ),
-          ),
-          subtitle: Text(v.scheduledTime, style: AppTextStyles.caption),
-          trailing: v.completed
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${v.completedDate?.month}月${v.completedDate?.day}日',
-                      style: AppTextStyles.caption,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
-                      onPressed: () => _editVaccineRecord(v),
-                    ),
-                  ],
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () => _markVaccineCompleted(v),
-                      child: const Text('标记完成'),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.edit, size: 20, color: AppColors.primary),
-                      onPressed: () => _editVaccineRecord(v),
-                    ),
-                  ],
-                ),
         ),
       ),
     );
@@ -670,5 +668,177 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
 
   String _formatDateTime(DateTime dt) {
     return '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// 显示疫苗选项菜单（长按）
+  void _showVaccineOptions(VaccineRecord record) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(record.name, style: AppTextStyles.subtitle),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.edit, color: AppColors.primary),
+                title: const Text('编辑疫苗'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editVaccineRecord(record);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('删除疫苗', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('确认删除'),
+                      content: Text('确定要删除 "${record.name}" 吗？'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('取消'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                          child: const Text('删除'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && record.id != null) {
+                    final success = await DatabaseService.instance.deleteVaccineRecord(record.id!);
+                    if (success) {
+                      await _loadData();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('疫苗已删除')),
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 根据当前 Tab 构建浮动按钮
+  Widget? _buildFloatingActionButton() {
+    // 使用 AnimatedBuilder 监听 TabController 的变化
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, child) {
+        if (_tabController.index == 0) {
+          // 疫苗接种 Tab - 显示添加疫苗按钮
+          return FloatingActionButton(
+            onPressed: _showAddVaccineDialog,
+            backgroundColor: AppColors.primary,
+            elevation: 4,
+            child: const Icon(Icons.add),
+          );
+        } else {
+          // 疾病记录 Tab - 显示添加疾病按钮
+          return FloatingActionButton(
+            onPressed: _showAddIllnessDialog,
+            backgroundColor: AppColors.error,
+            elevation: 4,
+            child: const Icon(Icons.add),
+          );
+        }
+      },
+    );
+  }
+
+  /// 显示添加疫苗对话框
+  void _showAddVaccineDialog() {
+    final nameController = TextEditingController();
+    final scheduledController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加疫苗'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: '疫苗名称',
+                  hintText: '如：流感疫苗',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: scheduledController,
+                decoration: const InputDecoration(
+                  labelText: '建议接种时间',
+                  hintText: '如：6月龄、1岁',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty && _baby != null) {
+                final babyId = _baby!.id;
+                if (babyId == null) return;
+                
+                final record = VaccineRecord(
+                  babyId: babyId,
+                  vaccineId: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                  name: nameController.text,
+                  scheduledTime: scheduledController.text.isNotEmpty 
+                      ? scheduledController.text 
+                      : '自定义',
+                );
+                await DatabaseService.instance.createVaccineRecord(record);
+                Navigator.pop(context);
+                await _loadData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('疫苗已添加')),
+                  );
+                }
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
   }
 }
