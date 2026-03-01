@@ -110,6 +110,12 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
   Future<void> _navigateToDetail(Milestone milestone) async {
     if (_baby == null) return;
 
+    // 查找已有的记录
+    final existingRecord = _completedRecords.firstWhere(
+      (r) => r.milestoneId == milestone.id,
+      orElse: () => null as MilestoneRecord,
+    );
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -117,6 +123,7 @@ class _MilestonesScreenState extends State<MilestonesScreen> {
           milestone: milestone,
           baby: _baby!,
           isCompleted: _isMilestoneCompleted(milestone.id),
+          existingRecord: existingRecord.id != null ? existingRecord : null,
         ),
       ),
     );

@@ -30,9 +30,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final babies = await DatabaseService.instance.getAllBabies();
-    if (babies.isNotEmpty) {
-      setState(() => _baby = babies.first);
+    try {
+      final babies = await DatabaseService.instance.getAllBabies();
+      if (mounted) {
+        setState(() {
+          if (babies.isNotEmpty) {
+            _baby = babies.first;
+          } else {
+            _baby = null;
+          }
+        });
+      }
+    } catch (e) {
+      print('加载宝宝数据失败: $e');
+      if (mounted) {
+        setState(() => _baby = null);
+      }
     }
   }
 
