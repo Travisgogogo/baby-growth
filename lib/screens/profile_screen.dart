@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/app_theme.dart';
 import '../widgets/animations.dart';
-import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
 import '../services/update_service.dart';
@@ -215,124 +214,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
-  }
-
-  Future<void> _backupData() async {
-    if (_baby == null) return;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('正在备份...'),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final babyId = _baby?.id;
-      if (babyId == null) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('备份失败: 宝宝信息不存在')),
-        );
-        return;
-      }
-      final backup = {
-        'version': AppConstants.backupVersion,
-        'timestamp': DateTime.now().toIso8601String(),
-        'baby': _baby!.toMap(),
-        'growthRecords': (await DatabaseService.instance.getGrowthRecords(babyId)).map((r) => r.toMap()).toList(),
-        'feedRecords': (await DatabaseService.instance.getFeedRecords(babyId, limit: AppConstants.maxQueryLimit)).map((r) => r.toMap()).toList(),
-        'sleepRecords': (await DatabaseService.instance.getSleepRecords(babyId)).map((r) => r.toMap()).toList(),
-        'diaperRecords': (await DatabaseService.instance.getDiaperRecords(babyId)).map((r) => r.toMap()).toList(),
-        'milestoneRecords': (await DatabaseService.instance.getMilestoneRecords(babyId)).map((r) => r.toMap()).toList(),
-      };
-      
-      final jsonStr = jsonEncode(backup);
-      
-      Navigator.pop(context);
-      
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('备份成功'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('请将以下备份代码保存到安全的地方：'),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SelectableText(
-                  base64Encode(utf8.encode(jsonStr)).substring(0, 100) + '...',
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('复制'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('备份失败: $e')),
-      );
-    }
-  }
-
-  void _restoreData() {
-    final controller = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('数据恢复'),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: '请输入备份代码',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('恢复功能开发中')),
-              );
-            },
-            child: const Text('恢复'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _editBabyProfile() {
@@ -557,14 +438,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _buildSectionTitle('数据管理'),
           ),
           FadeInAnimation(
-            delay: const Duration(milliseconds: 150),
-            child: _buildMenuItem(Icons.backup, '数据备份', _backupData),
-          ),
-          FadeInAnimation(
-            delay: const Duration(milliseconds: 200),
-            child: _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
-          ),
-          FadeInAnimation(
             delay: const Duration(milliseconds: 250),
             child: _buildMenuItem(Icons.cloud, '云端备份', () {
               Navigator.push(
@@ -574,7 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             }),
           ),
           FadeInAnimation(
-            delay: const Duration(milliseconds: 250),
+            delay: const Duration(milliseconds: 300),
             child: _buildMenuItem(Icons.share, '分享成长', () {
               Navigator.push(
                 context,
