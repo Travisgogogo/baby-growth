@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/app_theme.dart';
 import '../widgets/animations.dart';
 import '../models/baby.dart';
@@ -491,25 +490,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
-          FutureBuilder<PackageInfo>(
-            future: PackageInfo.fromPlatform().catchError((e) {
-              debugPrint('PackageInfo error: $e');
-              return PackageInfo(
-                appName: '宝宝成长记',
-                packageName: 'com.example.baby_growth',
-                version: '1.7.7',
-                buildNumber: '37',
-              );
-            }),
-            builder: (context, snapshot) {
-              String version = '1.7.7';
-              if (snapshot.hasData && snapshot.data != null) {
-                version = snapshot.data!.version;
-              }
-              return Center(
-                child: Text('宝宝成长记 v$version', style: AppTextStyles.caption),
-              );
-            },
+          const Center(
+            child: Text('宝宝成长记 v1.7.8', style: AppTextStyles.caption),
           ),
           const SizedBox(height: 32),
         ],
