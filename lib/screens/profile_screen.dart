@@ -492,9 +492,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 32),
           FutureBuilder<PackageInfo>(
-            future: PackageInfo.fromPlatform(),
+            future: PackageInfo.fromPlatform().catchError((e) {
+              debugPrint('PackageInfo error: $e');
+              return PackageInfo(
+                appName: '宝宝成长记',
+                packageName: 'com.example.baby_growth',
+                version: '1.7.7',
+                buildNumber: '37',
+              );
+            }),
             builder: (context, snapshot) {
-              final version = snapshot.hasData ? snapshot.data!.version : '1.0.0';
+              String version = '1.7.7';
+              if (snapshot.hasData && snapshot.data != null) {
+                version = snapshot.data!.version;
+              }
               return Center(
                 child: Text('宝宝成长记 v$version', style: AppTextStyles.caption),
               );
