@@ -236,7 +236,19 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         throw Exception('宝宝ID为空');
       }
 
+      debugPrint('保存记录 - photoPath: $_photoPath');
+
       if (_isCompleted) {
+        // 验证照片文件是否存在
+        if (_photoPath != null) {
+          final photoFile = File(_photoPath!);
+          final exists = await photoFile.exists();
+          debugPrint('照片文件存在: $exists, 路径: $_photoPath');
+          if (!exists) {
+            debugPrint('警告: 照片文件不存在，将保存空路径');
+          }
+        }
+
         // 保存完成记录
         final record = MilestoneRecord(
           id: widget.existingRecord?.id,
@@ -247,12 +259,16 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
           note: _noteController.text.isEmpty ? null : _noteController.text,
         );
 
+        debugPrint('准备保存记录: ${record.toMap()}');
+
         if (widget.existingRecord != null) {
           // 更新现有记录
-          await DatabaseService.instance.updateMilestoneRecord(record);
+          final result = await DatabaseService.instance.updateMilestoneRecord(record);
+          debugPrint('更新记录结果: $result');
         } else {
           // 创建新记录
-          await DatabaseService.instance.createMilestoneRecord(record);
+          final result = await DatabaseService.instance.createMilestoneRecord(record);
+          debugPrint('创建记录结果: $result');
         }
       } else {
         // 删除完成记录（标记为未完成）
@@ -266,6 +282,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         Navigator.pop(context, true); // 返回true表示有更新
       }
     } catch (e) {
+      debugPrint('保存记录失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e')),
@@ -645,37 +662,85 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
             ),
             const SizedBox(height: 12),
             if (_photoPath != null)
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    child: Image.file(
-                      File(_photoPath!),
+              FutureBuilder<bool>(
+                future: File(_photoPath!).exists(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
                       height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _photoPath = null),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  
+                  final fileExists = snapshot.data ?? false;
+                  
+                  if (!fileExists) {
+                    debugPrint('照片文件不存在: $_photoPath');
+                    // 文件不存在，显示拍照按钮
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildPhotoButton(
+                            icon: Icons.camera_alt,
+                            label: '拍照',
+                            onTap: _takePhoto,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 20,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildPhotoButton(
+                            icon: Icons.photo_library,
+                            label: '从相册选择',
+                            onTap: _pickImage,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                        child: Image.file(
+                          File(_photoPath!),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            debugPrint('加载照片失败: $error');
+                            return Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Text('照片加载失败'),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _photoPath = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               )
             else
               Row(
