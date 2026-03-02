@@ -6,6 +6,7 @@ import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../services/database_service.dart';
 import '../services/update_service.dart';
+import '../utils/version_util.dart';
 import 'share_screen.dart';
 import 'cloud_backup_screen.dart';
 import 'baby_birth_detail_screen.dart';
@@ -490,8 +491,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
-          const Center(
-            child: Text('宝宝成长记 v1.7.8', style: AppTextStyles.caption),
+          FutureBuilder<String>(
+            future: VersionUtil.getVersion(),
+            builder: (context, snapshot) {
+              final version = snapshot.data ?? '1.7.9';
+              return Center(
+                child: Text('宝宝成长记 v$version', style: AppTextStyles.caption),
+              );
+            },
           ),
           const SizedBox(height: 32),
         ],
