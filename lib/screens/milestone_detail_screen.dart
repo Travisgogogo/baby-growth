@@ -145,7 +145,19 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         throw Exception('宝宝ID为空');
       }
 
+      debugPrint('_saveRecord: babyId=$babyId, milestoneId=${widget.milestone.id}');
+      debugPrint('_saveRecord: _photoPath=$_photoPath');
+
       if (_isCompleted) {
+        // 验证照片文件是否存在
+        if (_photoPath != null) {
+          final exists = await ImageStorageUtil.imageExists(_photoPath);
+          debugPrint('_saveRecord: photo exists=$exists');
+          if (!exists) {
+            debugPrint('_saveRecord: WARNING - photo file does not exist!');
+          }
+        }
+
         // 保存完成记录
         final record = MilestoneRecord(
           id: widget.existingRecord?.id,
@@ -156,12 +168,16 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
           note: _noteController.text.isEmpty ? null : _noteController.text,
         );
 
+        debugPrint('_saveRecord: saving record=${record.toMap()}');
+
         if (widget.existingRecord != null) {
           // 更新现有记录
-          await DatabaseService.instance.updateMilestoneRecord(record);
+          final result = await DatabaseService.instance.updateMilestoneRecord(record);
+          debugPrint('_saveRecord: update result=$result');
         } else {
           // 创建新记录
-          await DatabaseService.instance.createMilestoneRecord(record);
+          final result = await DatabaseService.instance.createMilestoneRecord(record);
+          debugPrint('_saveRecord: create result=$result');
         }
       } else {
         // 删除完成记录（标记为未完成）
@@ -174,7 +190,9 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       if (mounted) {
         Navigator.pop(context, true); // 返回true表示有更新
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('_saveRecord: ERROR=$e');
+      debugPrint('_saveRecord: stackTrace=$stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e')),
@@ -554,37 +572,85 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
             ),
             const SizedBox(height: 12),
             if (_photoPath != null)
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    child: Image.file(
-                      File(_photoPath!),
+              FutureBuilder<bool>(
+                future: ImageStorageUtil.imageExists(_photoPath),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
                       height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _photoPath = null),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  
+                  final exists = snapshot.data ?? false;
+                  debugPrint('Photo display: exists=$exists, path=$_photoPath');
+                  
+                  if (!exists) {
+                    // 文件不存在，显示拍照按钮
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildPhotoButton(
+                            icon: Icons.camera_alt,
+                            label: '拍照',
+                            onTap: _takePhoto,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 20,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildPhotoButton(
+                            icon: Icons.photo_library,
+                            label: '从相册选择',
+                            onTap: _pickImage,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                        child: Image.file(
+                          File(_photoPath!),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            debugPrint('Image.file error: $error');
+                            return Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Text('无法加载图片'),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _photoPath = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               )
             else
               Row(
