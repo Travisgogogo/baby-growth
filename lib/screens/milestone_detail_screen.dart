@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../widgets/animations.dart';
@@ -62,9 +64,12 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         maxHeight: 1200,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
-        setState(() => _photoPath = image.path);
+        final savedPath = await _saveImageToAppDirectory(image.path);
+        if (savedPath != null) {
+          setState(() => _photoPath = savedPath);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -83,9 +88,12 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         maxHeight: 1200,
         imageQuality: 85,
       );
-      
+
       if (photo != null) {
-        setState(() => _photoPath = photo.path);
+        final savedPath = await _saveImageToAppDirectory(photo.path);
+        if (savedPath != null) {
+          setState(() => _photoPath = savedPath);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -116,6 +124,37 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
     
     if (picked != null) {
       setState(() => _completedDate = picked);
+    }
+  }
+
+  /// 将图片保存到应用目录，返回持久化路径
+  Future<String?> _saveImageToAppDirectory(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final milestoneDir = Directory(path.join(appDir.path, 'milestone_photos'));
+      
+      // 确保目录存在
+      if (!await milestoneDir.exists()) {
+        await milestoneDir.create(recursive: true);
+      }
+      
+      // 生成唯一文件名
+      final fileName = 'milestone_${widget.milestone.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final destPath = path.join(milestoneDir.path, fileName);
+      
+      // 复制文件
+      final sourceFile = File(sourcePath);
+      await sourceFile.copy(destPath);
+      
+      return destPath;
+    } catch (e) {
+      debugPrint('保存图片失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+      return null;
     }
   }
 
