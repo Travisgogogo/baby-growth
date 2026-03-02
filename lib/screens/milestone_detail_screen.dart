@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:permission_handler/permission_handler.dart';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../widgets/animations.dart';
@@ -82,6 +83,17 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
 
   Future<void> _takePhoto() async {
     try {
+      // 请求相机权限
+      final cameraStatus = await Permission.camera.request();
+      if (!cameraStatus.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('需要相机权限才能拍照')),
+          );
+        }
+        return;
+      }
+
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1200,
@@ -130,6 +142,18 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   /// 将图片保存到应用目录，返回持久化路径
   Future<String?> _saveImageToAppDirectory(String sourcePath) async {
     try {
+      // 检查源文件是否存在
+      final sourceFile = File(sourcePath);
+      if (!await sourceFile.exists()) {
+        debugPrint('源文件不存在: $sourcePath');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('图片文件不存在，请重试')),
+          );
+        }
+        return null;
+      }
+
       final appDir = await getApplicationDocumentsDirectory();
       final milestoneDir = Directory(path.join(appDir.path, 'milestone_photos'));
       
@@ -143,9 +167,14 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       final destPath = path.join(milestoneDir.path, fileName);
       
       // 复制文件
-      final sourceFile = File(sourcePath);
-      await sourceFile.copy(destPath);
+      final destFile = await sourceFile.copy(destPath);
       
+      // 验证复制是否成功
+      if (!await destFile.exists()) {
+        throw Exception('文件复制后不存在');
+      }
+      
+      debugPrint('图片已保存: $destPath');
       return destPath;
     } catch (e) {
       debugPrint('保存图片失败: $e');
