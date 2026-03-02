@@ -42,7 +42,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   void initState() {
     super.initState();
     _isCompleted = widget.isCompleted;
-    
+
     // 如果有已有记录，加载数据
     if (widget.existingRecord != null) {
       _completedDate = widget.existingRecord!.completedDate;
@@ -102,7 +102,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       );
 
       if (photo != null) {
-        final savedPath = await _saveImageToAppDirectory(photo.path);
+        final savedPath = await _saveXFileToAppDirectory(photo);
         if (savedPath != null) {
           setState(() => _photoPath = savedPath);
         }
@@ -133,9 +133,47 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() => _completedDate = picked);
+    }
+  }
+
+  /// 将XFile保存到应用目录，返回持久化路径
+  Future<String?> _saveXFileToAppDirectory(XFile xfile) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final milestoneDir = Directory(path.join(appDir.path, 'milestone_photos'));
+
+      // 确保目录存在
+      if (!await milestoneDir.exists()) {
+        await milestoneDir.create(recursive: true);
+      }
+
+      // 生成唯一文件名
+      final fileName = 'milestone_${widget.milestone.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final destPath = path.join(milestoneDir.path, fileName);
+
+      // 读取XFile内容并写入
+      final bytes = await xfile.readAsBytes();
+      final destFile = File(destPath);
+      await destFile.writeAsBytes(bytes);
+
+      // 验证写入是否成功
+      if (!await destFile.exists()) {
+        throw Exception('文件写入后不存在');
+      }
+
+      debugPrint('图片已保存: $destPath');
+      return destPath;
+    } catch (e) {
+      debugPrint('保存图片失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+      return null;
     }
   }
 
@@ -156,24 +194,24 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
 
       final appDir = await getApplicationDocumentsDirectory();
       final milestoneDir = Directory(path.join(appDir.path, 'milestone_photos'));
-      
+
       // 确保目录存在
       if (!await milestoneDir.exists()) {
         await milestoneDir.create(recursive: true);
       }
-      
+
       // 生成唯一文件名
       final fileName = 'milestone_${widget.milestone.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final destPath = path.join(milestoneDir.path, fileName);
-      
+
       // 复制文件
       final destFile = await sourceFile.copy(destPath);
-      
+
       // 验证复制是否成功
       if (!await destFile.exists()) {
         throw Exception('文件复制后不存在');
       }
-      
+
       debugPrint('图片已保存: $destPath');
       return destPath;
     } catch (e) {
@@ -189,7 +227,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
 
   Future<void> _saveRecord() async {
     if (_isSaving) return;
-    
+
     setState(() => _isSaving = true);
 
     try {
