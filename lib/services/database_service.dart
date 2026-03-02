@@ -884,9 +884,12 @@ class DatabaseService {
 
   Future<bool> close() async {
     try {
-      final db = await database;
-      await db.close();
-      return true;
+      if (_database != null) {
+        await _database!.close();
+        _database = null;  // 关键：重置为 null，下次会重新打开
+        return true;
+      }
+      return false;
     } catch (e) {
       debugPrint('关闭数据库失败: $e');
       return false;

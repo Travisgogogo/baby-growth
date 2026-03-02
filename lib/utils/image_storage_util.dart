@@ -31,8 +31,9 @@ class ImageStorageUtil {
         await imagesDir.create(recursive: true);
       }
       
-      // 生成唯一文件名
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(tempPath)}';
+      // 生成唯一文件名（使用时间戳，避免使用可能出错的路径解析）
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'milestone_${timestamp}.jpg';
       final newPath = '${imagesDir.path}/$fileName';
       debugPrint('saveImagePermanently: newPath = $newPath');
       

@@ -39,9 +39,12 @@ class _BabyGrowthAppState extends State<BabyGrowthApp> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 当应用进入后台或退出时关闭数据库
+    // 当应用进入后台时关闭数据库，返回前台时重新打开
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       DatabaseService.instance.close();
+    } else if (state == AppLifecycleState.resumed) {
+      // 应用返回前台时重新初始化数据库
+      DatabaseService.instance.database;
     }
   }
 
