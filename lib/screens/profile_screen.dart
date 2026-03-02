@@ -4,9 +4,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/app_theme.dart';
 import '../widgets/animations.dart';
-import 'dart:convert';
 import '../models/baby.dart';
 import '../services/database_service.dart';
+import '../services/update_service.dart';
+import 'share_screen.dart';
+import 'cloud_backup_screen.dart';
+import 'baby_birth_detail_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,9 +30,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final babies = await DatabaseService.instance.getAllBabies();
-    if (babies.isNotEmpty) {
-      setState(() => _baby = babies.first);
+    try {
+      final babies = await DatabaseService.instance.getAllBabies();
+      if (mounted) {
+        setState(() {
+          if (babies.isNotEmpty) {
+            _baby = babies.first;
+          } else {
+            _baby = null;
+          }
+        });
+      }
+    } catch (e) {
+      print('加载宝宝数据失败: $e');
+      if (mounted) {
+        setState(() => _baby = null);
+      }
     }
   }
 
@@ -212,124 +229,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _backupData() async {
-    if (_baby == null) return;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('正在备份...'),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final babyId = _baby?.id;
-      if (babyId == null) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('备份失败: 宝宝信息不存在')),
-        );
-        return;
-      }
-      final backup = {
-        'version': AppConstants.backupVersion,
-        'timestamp': DateTime.now().toIso8601String(),
-        'baby': _baby!.toMap(),
-        'growthRecords': (await DatabaseService.instance.getGrowthRecords(babyId)).map((r) => r.toMap()).toList(),
-        'feedRecords': (await DatabaseService.instance.getFeedRecords(babyId, limit: AppConstants.maxQueryLimit)).map((r) => r.toMap()).toList(),
-        'sleepRecords': (await DatabaseService.instance.getSleepRecords(babyId)).map((r) => r.toMap()).toList(),
-        'diaperRecords': (await DatabaseService.instance.getDiaperRecords(babyId)).map((r) => r.toMap()).toList(),
-        'milestoneRecords': (await DatabaseService.instance.getMilestoneRecords(babyId)).map((r) => r.toMap()).toList(),
-      };
-      
-      final jsonStr = jsonEncode(backup);
-      
-      Navigator.pop(context);
-      
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('备份成功'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('请将以下备份代码保存到安全的地方：'),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SelectableText(
-                  base64Encode(utf8.encode(jsonStr)).substring(0, 100) + '...',
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('复制'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('备份失败: $e')),
-      );
-    }
-  }
-
-  void _restoreData() {
-    final controller = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('数据恢复'),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: '请输入备份代码',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('恢复功能开发中')),
-              );
-            },
-            child: const Text('恢复'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _editBabyProfile() {
     if (_baby == null) return;
     
@@ -458,6 +357,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// 检查更新
+  Future<void> _checkUpdate() async {
+    if (!Platform.isAndroid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('仅 Android 支持检查更新')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在检查更新...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final updateInfo = await UpdateService.checkUpdate();
+      Navigator.pop(context);
+
+      if (!mounted) return;
+
+      if (updateInfo != null && updateInfo.hasUpdate) {
+        UpdateDialog.show(context, updateInfo);
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('已是最新版本'),
+            content: const Text('当前已经是最新版本，无需更新。'),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('检查更新失败: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -475,27 +430,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(
             delay: const Duration(milliseconds: 100),
-            child: _buildSectionTitle('数据管理'),
+            child: _buildSectionTitle('宝宝信息'),
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 150),
-            child: _buildMenuItem(Icons.backup, '数据备份', _backupData),
+            child: _buildMenuItem(Icons.child_care, '出生信息', () {
+              if (_baby != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BabyBirthDetailScreen(baby: _baby!),
+                  ),
+                ).then((_) => _loadData()); // 返回后刷新数据
+              }
+            }),
           ),
+          const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(
             delay: const Duration(milliseconds: 200),
-            child: _buildMenuItem(Icons.restore, '数据恢复', _restoreData),
+            child: _buildSectionTitle('数据管理'),
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 250),
-            child: _buildMenuItem(Icons.share, '分享成长', () {}),
+            child: _buildMenuItem(Icons.cloud, '云端备份', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CloudBackupScreen()),
+              );
+            }),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 300),
+            child: _buildMenuItem(Icons.share, '分享成长', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShareScreen()),
+              );
+            }),
           ),
           const SizedBox(height: AppDimensions.paddingLarge),
           FadeInAnimation(
             delay: const Duration(milliseconds: 300),
-            child: _buildSectionTitle('关于'),
+            child: _buildSectionTitle('应用'),
           ),
           FadeInAnimation(
             delay: const Duration(milliseconds: 350),
+            child: _buildMenuItem(Icons.system_update, '检查更新', _checkUpdate),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 400),
+            child: _buildMenuItem(Icons.privacy_tip, '隐私政策', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              );
+            }),
+          ),
+          FadeInAnimation(
+            delay: const Duration(milliseconds: 450),
             child: _buildMenuItem(Icons.info, '关于我们', () {}),
           ),
           const SizedBox(height: 32),
