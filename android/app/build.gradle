@@ -58,8 +58,9 @@ android {
         applicationId "com.example.babygrowth"
         minSdk 24
         targetSdk 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        // Flutter 会自动从 pubspec.yaml 设置版本号
+        // versionCode flutterVersionCode.toInteger()
+        // versionName flutterVersionName
     }
 
     signingConfigs {
