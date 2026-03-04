@@ -19,6 +19,7 @@ import 'records_screen.dart';
 import 'milestones_screen.dart';
 import 'profile_screen.dart';
 import 'health_screen.dart';
+import 'reminder_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -449,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
       else
         _ActionItem('睡觉', '😴', Colors.green.shade50, () => _showSleepDialog()),
       _ActionItem('换尿布', '💩', Colors.yellow.shade50, () => _showDiaperDialog()),
-      _ActionItem('量身高', '📏', Colors.blue.shade50, () => _showGrowthDialog()),
+      _ActionItem('提醒', '⏰', Colors.purple.shade50, () => _navigateToReminders()),
     ];
 
     return Container(
@@ -1259,6 +1260,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _navigateToReminders() {
+    if (_baby != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReminderListScreen(baby: _baby!),
+        ),
+      );
+    }
   }
 }
 

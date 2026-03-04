@@ -12,6 +12,7 @@ import '../constants/milestone_data.dart';
 import '../models/photo.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
+import '../models/reminder.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -31,7 +32,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -239,6 +240,24 @@ class DatabaseService {
       await db.execute('ALTER TABLE babies ADD COLUMN birthPhotoPath TEXT');
       await db.execute('ALTER TABLE babies ADD COLUMN handprintPath TEXT');
       await db.execute('ALTER TABLE babies ADD COLUMN footprintPath TEXT');
+    }
+    
+    if (oldVersion < 5) {
+      // 添加提醒表
+      await db.execute('''
+        CREATE TABLE reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          babyId INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          time TEXT NOT NULL,
+          isEnabled INTEGER NOT NULL DEFAULT 1,
+          isRepeating INTEGER NOT NULL DEFAULT 0,
+          repeatDays TEXT,
+          createdAt TEXT NOT NULL,
+          FOREIGN KEY (babyId) REFERENCES babies (id)
+        )
+      ''');
     }
   }
 
@@ -878,6 +897,81 @@ class DatabaseService {
       return true;
     } catch (e) {
       debugPrint('删除疫苗记录失败: $e');
+      return false;
+    }
+  }
+
+  // Reminder operations
+  Future<Reminder?> createReminder(Reminder reminder) async {
+    try {
+      final db = await database;
+      final id = await db.insert('reminders', reminder.toMap());
+      return reminder.copyWith(id: id);
+    } catch (e) {
+      debugPrint('创建提醒失败: $e');
+      return null;
+    }
+  }
+
+  Future<List<Reminder>> getReminders(int babyId) async {
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'reminders',
+        where: 'babyId = ?',
+        whereArgs: [babyId],
+        orderBy: 'time ASC',
+      );
+      return maps.map((map) => Reminder.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取提醒列表失败: $e');
+      return [];
+    }
+  }
+
+  Future<List<Reminder>> getEnabledReminders(int babyId) async {
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'reminders',
+        where: 'babyId = ? AND isEnabled = 1',
+        whereArgs: [babyId],
+        orderBy: 'time ASC',
+      );
+      return maps.map((map) => Reminder.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('获取启用提醒列表失败: $e');
+      return [];
+    }
+  }
+
+  Future<bool> updateReminder(Reminder reminder) async {
+    try {
+      final db = await database;
+      await db.update(
+        'reminders',
+        reminder.toMap(),
+        where: 'id = ?',
+        whereArgs: [reminder.id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('更新提醒失败: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteReminder(int id) async {
+    try {
+      final db = await database;
+      await db.delete(
+        'reminders',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('删除提醒失败: $e');
       return false;
     }
   }
