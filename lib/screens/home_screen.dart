@@ -166,6 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildHeader(),
             SleepPredictionCard(prediction: sleepPrediction),
             _buildQuickActions(),
+            _buildYesterdaySummary(),
             _buildGrowthChart(),
             _buildRecentRecords(),
             _buildMilestones(),
@@ -652,6 +653,170 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildYesterdaySummary() {
+    final summary = _getYesterdaySummary();
+
+    return AnimatedCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('📊 昨日总结', style: AppTextStyles.title),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  summary.dateStr,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryItem(
+                  icon: '🍼',
+                  label: '喂奶',
+                  value: '${summary.feedCount}次',
+                  subValue: summary.totalFeedAmount > 0 ? '${summary.totalFeedAmount.toInt()}ml' : null,
+                  color: Colors.orange.shade50,
+                ),
+              ),
+              Expanded(
+                child: _buildSummaryItem(
+                  icon: '😴',
+                  label: '睡眠',
+                  value: '${summary.sleepCount}次',
+                  subValue: summary.totalSleepMinutes > 0 
+                      ? '${(summary.totalSleepMinutes / 60).toStringAsFixed(1)}小时' 
+                      : null,
+                  color: Colors.green.shade50,
+                ),
+              ),
+              Expanded(
+                child: _buildSummaryItem(
+                  icon: '💩',
+                  label: '换尿布',
+                  value: '${summary.diaperCount}次',
+                  subValue: null,
+                  color: Colors.yellow.shade50,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required String icon,
+    required String label,
+    required String value,
+    String? subValue,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(icon, style: const TextStyle(fontSize: 24)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        if (subValue != null)
+          Text(
+            subValue,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 获取昨日总结数据
+  YesterdaySummary _getYesterdaySummary() {
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final startOfDay = DateTime(yesterday.year, yesterday.month, yesterday.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    // 过滤昨日记录
+    final yesterdayFeeds = _recentFeeds.where((r) => 
+      r.time.isAfter(startOfDay) && r.time.isBefore(endOfDay)
+    ).toList();
+    
+    final yesterdaySleeps = _recentSleeps.where((r) => 
+      r.startTime.isAfter(startOfDay) && r.startTime.isBefore(endOfDay)
+    ).toList();
+    
+    final yesterdayDiapers = _recentDiapers.where((r) => 
+      r.time.isAfter(startOfDay) && r.time.isBefore(endOfDay)
+    ).toList();
+
+    // 计算统计数据
+    final feedCount = yesterdayFeeds.length;
+    final totalFeedAmount = yesterdayFeeds.fold<double>(
+      0, (sum, r) => sum + (r.amount ?? 0),
+    );
+
+    final sleepCount = yesterdaySleeps.length;
+    final totalSleepMinutes = yesterdaySleeps.fold<int>(
+      0, (sum, r) {
+        if (r.endTime != null) {
+          return sum + r.endTime!.difference(r.startTime).inMinutes;
+        }
+        return sum;
+      },
+    );
+
+    final diaperCount = yesterdayDiapers.length;
+
+    return YesterdaySummary(
+      dateStr: '${yesterday.month}月${yesterday.day}日',
+      feedCount: feedCount,
+      totalFeedAmount: totalFeedAmount,
+      sleepCount: sleepCount,
+      totalSleepMinutes: totalSleepMinutes,
+      diaperCount: diaperCount,
+    );
+  }
+
   /// 获取所有类型的记录并按时间排序
   List<RecordItem> _getAllRecentRecords() {
     final List<RecordItem> records = [];
@@ -1128,5 +1293,24 @@ class RecordItem {
     required this.time,
     required this.icon,
     required this.iconBgColor,
+  });
+}
+
+/// 昨日总结数据类
+class YesterdaySummary {
+  final String dateStr;
+  final int feedCount;
+  final double totalFeedAmount;
+  final int sleepCount;
+  final int totalSleepMinutes;
+  final int diaperCount;
+
+  YesterdaySummary({
+    required this.dateStr,
+    required this.feedCount,
+    required this.totalFeedAmount,
+    required this.sleepCount,
+    required this.totalSleepMinutes,
+    required this.diaperCount,
   });
 }
