@@ -366,7 +366,7 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
       time: reminderTime,
       isEnabled: widget.reminder?.isEnabled ?? true,
       isRepeating: _isRepeating,
-      repeatDays: _isRepeating ? _selectedDays.toList()..sort() : null,
+      repeatDays: _isRepeating ? (_selectedDays.toList()..sort()) : null,
     );
 
     bool success;
