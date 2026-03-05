@@ -12,7 +12,6 @@ import '../constants/milestone_data.dart';
 import '../models/photo.dart';
 import '../models/illness_record.dart';
 import '../models/vaccine_record.dart';
-import '../models/reminder.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -32,7 +31,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 2,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -47,16 +46,7 @@ class DatabaseService {
         gender TEXT NOT NULL,
         birthWeight REAL,
         birthHeight REAL,
-        birthHeadCircumference REAL,
-        avatarPath TEXT,
-        birthTime TEXT,
-        birthPlace TEXT,
-        gestationalAge TEXT,
-        deliveryMode TEXT,
-        bloodType TEXT,
-        birthPhotoPath TEXT,
-        handprintPath TEXT,
-        footprintPath TEXT
+        birthHeadCircumference REAL
       )
     ''');
 
@@ -220,41 +210,6 @@ class DatabaseService {
           temperature REAL,
           description TEXT,
           treatment TEXT,
-          FOREIGN KEY (babyId) REFERENCES babies (id)
-        )
-      ''');
-    }
-    
-    if (oldVersion < 3) {
-      // 添加宝宝头像字段
-      await db.execute('ALTER TABLE babies ADD COLUMN avatarPath TEXT');
-    }
-    
-    if (oldVersion < 4) {
-      // 添加宝宝详细信息字段
-      await db.execute('ALTER TABLE babies ADD COLUMN birthTime TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN birthPlace TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN gestationalAge TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN deliveryMode TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN bloodType TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN birthPhotoPath TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN handprintPath TEXT');
-      await db.execute('ALTER TABLE babies ADD COLUMN footprintPath TEXT');
-    }
-    
-    if (oldVersion < 5) {
-      // 添加提醒表
-      await db.execute('''
-        CREATE TABLE reminders (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          babyId INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          description TEXT,
-          time TEXT NOT NULL,
-          isEnabled INTEGER NOT NULL DEFAULT 1,
-          isRepeating INTEGER NOT NULL DEFAULT 0,
-          repeatDays TEXT,
-          createdAt TEXT NOT NULL,
           FOREIGN KEY (babyId) REFERENCES babies (id)
         )
       ''');
@@ -464,22 +419,6 @@ class DatabaseService {
     }
   }
 
-  Future<bool> updateSleepRecord(SleepRecord record) async {
-    try {
-      final db = await database;
-      await db.update(
-        'sleep_records',
-        record.toMap(),
-        where: 'id = ?',
-        whereArgs: [record.id],
-      );
-      return true;
-    } catch (e) {
-      debugPrint('更新睡眠记录失败: $e');
-      return false;
-    }
-  }
-
   Future<List<SleepRecord>> getSleepRecords(int babyId) async {
     try {
       final db = await database;
@@ -520,22 +459,6 @@ class DatabaseService {
     } catch (e) {
       debugPrint('创建换尿布记录失败: $e');
       return null;
-    }
-  }
-
-  Future<bool> updateDiaperRecord(DiaperRecord record) async {
-    try {
-      final db = await database;
-      await db.update(
-        'diaper_records',
-        record.toMap(),
-        where: 'id = ?',
-        whereArgs: [record.id],
-      );
-      return true;
-    } catch (e) {
-      debugPrint('更新换尿布记录失败: $e');
-      return false;
     }
   }
 
@@ -886,104 +809,11 @@ class DatabaseService {
     }
   }
 
-  Future<bool> deleteVaccineRecord(int id) async {
-    try {
-      final db = await database;
-      await db.delete(
-        'vaccine_records',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      return true;
-    } catch (e) {
-      debugPrint('删除疫苗记录失败: $e');
-      return false;
-    }
-  }
-
-  // Reminder operations
-  Future<Reminder?> createReminder(Reminder reminder) async {
-    try {
-      final db = await database;
-      final id = await db.insert('reminders', reminder.toMap());
-      return reminder.copyWith(id: id);
-    } catch (e) {
-      debugPrint('创建提醒失败: $e');
-      return null;
-    }
-  }
-
-  Future<List<Reminder>> getReminders(int babyId) async {
-    try {
-      final db = await database;
-      final maps = await db.query(
-        'reminders',
-        where: 'babyId = ?',
-        whereArgs: [babyId],
-        orderBy: 'time ASC',
-      );
-      return maps.map((map) => Reminder.fromMap(map)).toList();
-    } catch (e) {
-      debugPrint('获取提醒列表失败: $e');
-      return [];
-    }
-  }
-
-  Future<List<Reminder>> getEnabledReminders(int babyId) async {
-    try {
-      final db = await database;
-      final maps = await db.query(
-        'reminders',
-        where: 'babyId = ? AND isEnabled = 1',
-        whereArgs: [babyId],
-        orderBy: 'time ASC',
-      );
-      return maps.map((map) => Reminder.fromMap(map)).toList();
-    } catch (e) {
-      debugPrint('获取启用提醒列表失败: $e');
-      return [];
-    }
-  }
-
-  Future<bool> updateReminder(Reminder reminder) async {
-    try {
-      final db = await database;
-      await db.update(
-        'reminders',
-        reminder.toMap(),
-        where: 'id = ?',
-        whereArgs: [reminder.id],
-      );
-      return true;
-    } catch (e) {
-      debugPrint('更新提醒失败: $e');
-      return false;
-    }
-  }
-
-  Future<bool> deleteReminder(int id) async {
-    try {
-      final db = await database;
-      await db.delete(
-        'reminders',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      return true;
-    } catch (e) {
-      debugPrint('删除提醒失败: $e');
-      return false;
-    }
-  }
-
   Future<bool> close() async {
     try {
-      if (_database != null) {
-        await _database!.close();
-        _database = null;  // 关键：重置为 null，下次会重新打开
-        return true;
-      }
-      return false;
+      final db = await database;
+      await db.close();
+      return true;
     } catch (e) {
       debugPrint('关闭数据库失败: $e');
       return false;

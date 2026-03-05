@@ -1,52 +1,16 @@
 import 'package:flutter/material.dart';
 import 'constants/app_theme.dart';
 import 'screens/home_screen.dart';
-import 'services/database_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
-  // 捕获 Flutter 错误
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    print('Flutter Error: ${details.exception}');
-    print('Stack: ${details.stack}');
-  };
-  
-  // 确保数据库在应用退出时关闭
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await NotificationService().init();
   runApp(const BabyGrowthApp());
 }
 
-class BabyGrowthApp extends StatefulWidget {
+class BabyGrowthApp extends StatelessWidget {
   const BabyGrowthApp({super.key});
-
-  @override
-  State<BabyGrowthApp> createState() => _BabyGrowthAppState();
-}
-
-class _BabyGrowthAppState extends State<BabyGrowthApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 当应用进入后台时关闭数据库，返回前台时重新打开
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      DatabaseService.instance.close();
-    } else if (state == AppLifecycleState.resumed) {
-      // 应用返回前台时重新初始化数据库
-      DatabaseService.instance.database;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../constants/who_growth_data.dart';
 import '../widgets/animations.dart';
-import '../widgets/sleep_prediction.dart';
 import '../models/baby.dart';
 import '../models/growth_record.dart';
 import '../models/feed_record.dart';
@@ -12,14 +10,14 @@ import '../models/sleep_record.dart';
 import '../models/diaper_record.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
-import '../services/update_service.dart';
+import '../services/nlp_parser.dart';
+import '../widgets/voice_record_button.dart';
 import 'growth_chart_screen.dart';
 import 'growth_chart_detail_screen.dart';
 import 'records_screen.dart';
 import 'milestones_screen.dart';
 import 'profile_screen.dart';
 import 'health_screen.dart';
-import 'reminder_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,8 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Baby? _baby;
   GrowthRecord? _latestGrowth;
   List<FeedRecord> _recentFeeds = [];
-  List<SleepRecord> _recentSleeps = [];
-  List<DiaperRecord> _recentDiapers = [];
   List<MilestoneRecord> _milestoneRecords = [];
   int _currentIndex = 0;
   bool _isLoading = true;
@@ -42,59 +38,36 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // 移除自动检查更新，改为在"我的"页面手动检查
   }
 
   Future<void> _loadData() async {
-    try {
-      setState(() => _isLoading = true);
-      final babies = await DatabaseService.instance.getAllBabies();
-      if (babies.isNotEmpty) {
-        final baby = babies.first;
-        final babyId = baby.id;
-        if (babyId != null) {
-          setState(() {
-            _baby = baby;
-          });
-          await _loadBabyData(babyId);
-        }
+    setState(() => _isLoading = true);
+    final babies = await DatabaseService.instance.getAllBabies();
+    if (babies.isNotEmpty) {
+      final baby = babies.first;
+      final babyId = baby.id;
+      if (babyId != null) {
+        setState(() {
+          _baby = baby;
+        });
+        await _loadBabyData(babyId);
       }
-    } catch (e, stackTrace) {
-      print('加载数据错误: $e');
-      print('Stack: $stackTrace');
-    } finally {
-      setState(() => _isLoading = false);
     }
+    setState(() => _isLoading = false);
   }
 
   Future<void> _loadBabyData(int babyId) async {
-    try {
-      final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
-      final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
-      final sleepRecords = await DatabaseService.instance.getSleepRecords(babyId);
-      final diaperRecords = await DatabaseService.instance.getDiaperRecords(babyId);
-      final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
+    final growthRecords = await DatabaseService.instance.getGrowthRecords(babyId);
+    final feedRecords = await DatabaseService.instance.getFeedRecords(babyId);
+    final milestoneRecords = await DatabaseService.instance.getMilestoneRecords(babyId);
 
-      if (mounted) {
-        setState(() {
-          if (growthRecords.isNotEmpty) {
-            _latestGrowth = growthRecords.first;
-          }
-          _recentFeeds = feedRecords;
-          _recentSleeps = sleepRecords;
-          _recentDiapers = diaperRecords;
-          _milestoneRecords = milestoneRecords;
-        });
+    setState(() {
+      if (growthRecords.isNotEmpty) {
+        _latestGrowth = growthRecords.first;
       }
-    } catch (e, stackTrace) {
-      print('加载宝宝数据错误: $e');
-      print('Stack: $stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载数据失败: $e')),
-        );
-      }
-    }
+      _recentFeeds = feedRecords;
+      _milestoneRecords = milestoneRecords;
+    });
   }
 
   @override
@@ -153,21 +126,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_baby == null) {
       return _buildEmptyState();
     }
-    
-    // 计算睡眠预测
-    final sleepPrediction = SleepPredictor.predictNextSleep(
-      baby: _baby!,
-      recentRecords: _recentSleeps,
-    );
-    
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
           children: [
             _buildHeader(),
-            SleepPredictionCard(prediction: sleepPrediction),
             _buildQuickActions(),
-            _buildYesterdaySummary(),
             _buildGrowthChart(),
             _buildRecentRecords(),
             _buildMilestones(),
@@ -346,29 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: _baby?.avatarPath != null
-                      ? Image.file(
-                          File(_baby!.avatarPath!),
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Text(
-                                _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
-                                style: const TextStyle(fontSize: 22),
-                              ),
-                            );
-                          },
-                        )
-                      : Center(
-                          child: Text(
-                            _baby?.name.isNotEmpty == true ? _baby!.name[0] : '👶',
-                            style: const TextStyle(fontSize: 22),
-                          ),
-                        ),
-                ),
+                child: const Center(child: Text('👶', style: TextStyle(fontSize: 22))),
               ),
               const SizedBox(width: 12),
               Column(
@@ -440,25 +382,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActions() {
-    // 检查是否有未结束的睡眠记录
-    final hasOngoingSleep = _recentSleeps.isNotEmpty && _recentSleeps.first.endTime == null;
-    
     final actions = [
       _ActionItem('喂奶', '🍼', Colors.orange.shade50, () => _showFeedDialog()),
-      if (hasOngoingSleep)
-        _ActionItem('醒来', '☀️', Colors.green.shade100, () => _showWakeUpDialog())
-      else
-        _ActionItem('睡觉', '😴', Colors.green.shade50, () => _showSleepDialog()),
+      _ActionItem('睡眠', '😴', Colors.green.shade50, () => _showSleepDialog()),
       _ActionItem('换尿布', '💩', Colors.yellow.shade50, () => _showDiaperDialog()),
-      _ActionItem('提醒', '⏰', Colors.purple.shade50, () => _navigateToReminders()),
+      _ActionItem('量身高', '📏', Colors.blue.shade50, () => _showGrowthDialog()),
     ];
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -466,10 +402,86 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: actions.map((action) => _buildActionButton(action)).toList(),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: actions.map((action) => _buildActionButton(action)).toList(),
+          ),
+          const SizedBox(height: 12),
+          // 语音记录按钮
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              VoiceRecordButton(
+                onResult: (record) {
+                  if (record != null) {
+                    _handleVoiceRecord(record);
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '按住说话',
+                style: AppTextStyles.caption,
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  void _handleVoiceRecord(ParsedRecord record) async {
+    if (_baby?.id == null) return;
+    
+    final babyId = _baby!.id!;
+    
+    switch (record.type) {
+      case 'feed':
+        final feedRecord = FeedRecord(
+          babyId: babyId,
+          time: record.data['time'] ?? DateTime.now(),
+          type: record.data['type'] ?? '母乳',
+          amount: record.data['amount'],
+        );
+        await DatabaseService.instance.createFeedRecord(feedRecord);
+        break;
+        
+      case 'sleep':
+        final sleepRecord = SleepRecord(
+          babyId: babyId,
+          startTime: record.data['startTime'] ?? DateTime.now(),
+          endTime: record.data['endTime'],
+        );
+        await DatabaseService.instance.createSleepRecord(sleepRecord);
+        break;
+        
+      case 'diaper':
+        final diaperRecord = DiaperRecord(
+          babyId: babyId,
+          time: record.data['time'] ?? DateTime.now(),
+          type: record.data['type'] ?? '尿',
+        );
+        await DatabaseService.instance.createDiaperRecord(diaperRecord);
+        break;
+        
+      case 'growth':
+        final growthRecord = GrowthRecord(
+          babyId: babyId,
+          date: record.data['date'] ?? DateTime.now(),
+          weight: record.data['weight'],
+          height: record.data['height'],
+        );
+        await DatabaseService.instance.createGrowthRecord(growthRecord);
+        break;
+    }
+    
+    // 刷新数据
+    await _loadData();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('记录已保存')),
     );
   }
 
@@ -538,7 +550,6 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,12 +628,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentRecords() {
-    // 合并所有记录并按时间排序
-    final allRecords = _getAllRecentRecords();
-
     return AnimatedCard(
       onTap: () => setState(() => _currentIndex = 2),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (allRecords.isEmpty)
+          if (_recentFeeds.isEmpty)
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -643,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            ...allRecords.take(5).toList().asMap().entries.map(
+            ..._recentFeeds.take(3).toList().asMap().entries.map(
               (entry) => ListItemAnimation(
                 index: entry.key,
                 child: _buildRecordItem(entry.value),
@@ -654,219 +661,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildYesterdaySummary() {
-    final summary = _getYesterdaySummary();
-
-    return AnimatedCard(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('📊 昨日总结', style: AppTextStyles.title),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  summary.dateStr,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  icon: '🍼',
-                  label: '喂奶',
-                  value: '${summary.feedCount}次',
-                  subValue: summary.totalFeedAmount > 0 ? '${summary.totalFeedAmount.toInt()}ml' : null,
-                  color: Colors.orange.shade50,
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryItem(
-                  icon: '😴',
-                  label: '睡眠',
-                  value: '${summary.sleepCount}次',
-                  subValue: summary.totalSleepMinutes > 0 
-                      ? '${(summary.totalSleepMinutes / 60).toStringAsFixed(1)}小时' 
-                      : null,
-                  color: Colors.green.shade50,
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryItem(
-                  icon: '💩',
-                  label: '换尿布',
-                  value: '${summary.diaperCount}次',
-                  subValue: null,
-                  color: Colors.yellow.shade50,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem({
-    required String icon,
-    required String label,
-    required String value,
-    String? subValue,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(icon, style: const TextStyle(fontSize: 24)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        if (subValue != null)
-          Text(
-            subValue,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 获取昨日总结数据
-  YesterdaySummary _getYesterdaySummary() {
-    final now = DateTime.now();
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-    final startOfDay = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    // 过滤昨日记录
-    final yesterdayFeeds = _recentFeeds.where((r) => 
-      r.time.isAfter(startOfDay) && r.time.isBefore(endOfDay)
-    ).toList();
-    
-    final yesterdaySleeps = _recentSleeps.where((r) => 
-      r.startTime.isAfter(startOfDay) && r.startTime.isBefore(endOfDay)
-    ).toList();
-    
-    final yesterdayDiapers = _recentDiapers.where((r) => 
-      r.time.isAfter(startOfDay) && r.time.isBefore(endOfDay)
-    ).toList();
-
-    // 计算统计数据
-    final feedCount = yesterdayFeeds.length;
-    final totalFeedAmount = yesterdayFeeds.fold<double>(
-      0, (sum, r) => sum + (r.amount ?? 0),
-    );
-
-    final sleepCount = yesterdaySleeps.length;
-    final totalSleepMinutes = yesterdaySleeps.fold<int>(
-      0, (sum, r) {
-        if (r.endTime != null) {
-          return sum + r.endTime!.difference(r.startTime).inMinutes;
-        }
-        return sum;
-      },
-    );
-
-    final diaperCount = yesterdayDiapers.length;
-
-    return YesterdaySummary(
-      dateStr: '${yesterday.month}月${yesterday.day}日',
-      feedCount: feedCount,
-      totalFeedAmount: totalFeedAmount,
-      sleepCount: sleepCount,
-      totalSleepMinutes: totalSleepMinutes,
-      diaperCount: diaperCount,
-    );
-  }
-
-  /// 获取所有类型的记录并按时间排序
-  List<RecordItem> _getAllRecentRecords() {
-    final List<RecordItem> records = [];
-    
-    // 添加喂奶记录
-    for (final feed in _recentFeeds) {
-      records.add(RecordItem(
-        type: RecordType.feed,
-        title: '${feed.typeDisplay} · ${feed.amountDisplay}',
-        time: feed.time,
-        icon: '🍼',
-        iconBgColor: Colors.orange.shade50,
-      ));
-    }
-    
-    // 添加睡眠记录
-    for (final sleep in _recentSleeps) {
-      final duration = sleep.endTime != null 
-          ? sleep.endTime!.difference(sleep.startTime).inMinutes 
-          : null;
-      records.add(RecordItem(
-        type: RecordType.sleep,
-        title: duration != null 
-            ? '睡眠 · ${duration ~/ 60}小时${duration % 60}分钟'
-            : '开始睡觉',
-        time: sleep.startTime,
-        icon: '😴',
-        iconBgColor: Colors.green.shade50,
-      ));
-    }
-    
-    // 添加换尿布记录
-    for (final diaper in _recentDiapers) {
-      records.add(RecordItem(
-        type: RecordType.diaper,
-        title: '换尿布 · ${diaper.type}',
-        time: diaper.time,
-        icon: '💩',
-        iconBgColor: Colors.yellow.shade50,
-      ));
-    }
-    
-    // 按时间倒序排序
-    records.sort((a, b) => b.time.compareTo(a.time));
-    
-    return records;
-  }
-
-  Widget _buildRecordItem(RecordItem record) {
+  Widget _buildRecordItem(FeedRecord feed) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
@@ -880,19 +675,19 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: record.iconBgColor,
+              color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Center(child: Text(record.icon, style: const TextStyle(fontSize: 18))),
+            child: const Center(child: Text('🍼', style: TextStyle(fontSize: 18))),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(record.title,
+                Text('${feed.typeDisplay} · ${feed.amountDisplay}',
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                Text('${_formatTime(record.time)}',
+                Text('${_formatTime(feed.time)}',
                     style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
               ],
             ),
@@ -914,7 +709,6 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const MilestonesScreen()),
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1077,60 +871,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showWakeUpDialog() {
-    final ongoingSleep = _recentSleeps.first;
-    final startTime = ongoingSleep.startTime;
-    final duration = DateTime.now().difference(startTime);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('☀️ 记录醒来'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('宝宝睡了 ${hours}小时${minutes}分钟'),
-            const SizedBox(height: 8),
-            Text(
-              '入睡时间: ${_formatTime(startTime)}',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (_baby != null && ongoingSleep.id != null) {
-                final babyId = _baby!.id;
-                if (babyId == null) return;
-                
-                final updatedRecord = ongoingSleep.copyWith(
-                  endTime: DateTime.now(),
-                );
-                await DatabaseService.instance.updateSleepRecord(updatedRecord);
-                await _loadBabyData(babyId);
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('醒来记录已保存，共睡${hours}小时${minutes}分钟')),
-                  );
-                }
-              }
-            },
-            child: const Text('记录醒来'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showDiaperDialog() {
     String diaperType = '湿尿';
     
@@ -1261,17 +1001,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  void _navigateToReminders() {
-    if (_baby != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ReminderListScreen(baby: _baby!),
-        ),
-      );
-    }
-  }
 }
 
 class _ActionItem {
@@ -1281,48 +1010,4 @@ class _ActionItem {
   final VoidCallback onTap;
 
   _ActionItem(this.label, this.icon, this.bgColor, this.onTap);
-}
-
-/// 记录类型枚举
-enum RecordType {
-  feed,
-  sleep,
-  diaper,
-  growth,
-}
-
-/// 统一的记录项类
-class RecordItem {
-  final RecordType type;
-  final String title;
-  final DateTime time;
-  final String icon;
-  final Color iconBgColor;
-
-  RecordItem({
-    required this.type,
-    required this.title,
-    required this.time,
-    required this.icon,
-    required this.iconBgColor,
-  });
-}
-
-/// 昨日总结数据类
-class YesterdaySummary {
-  final String dateStr;
-  final int feedCount;
-  final double totalFeedAmount;
-  final int sleepCount;
-  final int totalSleepMinutes;
-  final int diaperCount;
-
-  YesterdaySummary({
-    required this.dateStr,
-    required this.feedCount,
-    required this.totalFeedAmount,
-    required this.sleepCount,
-    required this.totalSleepMinutes,
-    required this.diaperCount,
-  });
 }

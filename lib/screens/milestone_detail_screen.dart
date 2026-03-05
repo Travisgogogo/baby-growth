@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+// import 'package:image_picker/image_picker.dart';
 import '../constants/app_theme.dart';
 import '../constants/milestone_data.dart';
 import '../widgets/animations.dart';
 import '../models/baby.dart';
 import '../models/milestone.dart';
 import '../services/database_service.dart';
-import '../utils/image_storage_util.dart';
 
 /// 里程碑详情/记录页面
 class MilestoneDetailScreen extends StatefulWidget {
@@ -34,7 +33,8 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   final TextEditingController _noteController = TextEditingController();
   String? _photoPath;
   bool _isSaving = false;
-  final ImagePicker _imagePicker = ImagePicker();
+
+  // final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -56,6 +56,11 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
   }
 
   Future<void> _pickImage() async {
+    // 图片选择功能暂时禁用
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('图片选择功能暂时不可用')),
+    );
+    /*
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -65,14 +70,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       );
       
       if (image != null) {
-        // 保存到永久存储目录
-        final permanentPath = await ImageStorageUtil.saveImagePermanently(image.path);
-        if (permanentPath != null) {
-          setState(() => _photoPath = permanentPath);
-        } else {
-          // 如果保存失败，使用临时路径
-          setState(() => _photoPath = image.path);
-        }
+        setState(() => _photoPath = image.path);
       }
     } catch (e) {
       if (mounted) {
@@ -81,9 +79,15 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         );
       }
     }
+    */
   }
 
   Future<void> _takePhoto() async {
+    // 拍照功能暂时禁用
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('拍照功能暂时不可用')),
+    );
+    /*
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -93,14 +97,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       );
       
       if (photo != null) {
-        // 保存到永久存储目录
-        final permanentPath = await ImageStorageUtil.saveImagePermanently(photo.path);
-        if (permanentPath != null) {
-          setState(() => _photoPath = permanentPath);
-        } else {
-          // 如果保存失败，使用临时路径
-          setState(() => _photoPath = photo.path);
-        }
+        setState(() => _photoPath = photo.path);
       }
     } catch (e) {
       if (mounted) {
@@ -109,6 +106,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         );
       }
     }
+    */
   }
 
   Future<void> _selectDate() async {
@@ -145,19 +143,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
         throw Exception('宝宝ID为空');
       }
 
-      debugPrint('_saveRecord: babyId=$babyId, milestoneId=${widget.milestone.id}');
-      debugPrint('_saveRecord: _photoPath=$_photoPath');
-
       if (_isCompleted) {
-        // 验证照片文件是否存在
-        if (_photoPath != null) {
-          final exists = await ImageStorageUtil.imageExists(_photoPath);
-          debugPrint('_saveRecord: photo exists=$exists');
-          if (!exists) {
-            debugPrint('_saveRecord: WARNING - photo file does not exist!');
-          }
-        }
-
         // 保存完成记录
         final record = MilestoneRecord(
           id: widget.existingRecord?.id,
@@ -168,16 +154,12 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
           note: _noteController.text.isEmpty ? null : _noteController.text,
         );
 
-        debugPrint('_saveRecord: saving record=${record.toMap()}');
-
         if (widget.existingRecord != null) {
           // 更新现有记录
-          final result = await DatabaseService.instance.updateMilestoneRecord(record);
-          debugPrint('_saveRecord: update result=$result');
+          await DatabaseService.instance.updateMilestoneRecord(record);
         } else {
           // 创建新记录
-          final result = await DatabaseService.instance.createMilestoneRecord(record);
-          debugPrint('_saveRecord: create result=$result');
+          await DatabaseService.instance.createMilestoneRecord(record);
         }
       } else {
         // 删除完成记录（标记为未完成）
@@ -190,9 +172,7 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
       if (mounted) {
         Navigator.pop(context, true); // 返回true表示有更新
       }
-    } catch (e, stackTrace) {
-      debugPrint('_saveRecord: ERROR=$e');
-      debugPrint('_saveRecord: stackTrace=$stackTrace');
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e')),
@@ -572,85 +552,37 @@ class _MilestoneDetailScreenState extends State<MilestoneDetailScreen> {
             ),
             const SizedBox(height: 12),
             if (_photoPath != null)
-              FutureBuilder<bool>(
-                future: ImageStorageUtil.imageExists(_photoPath),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                    child: Image.file(
+                      File(_photoPath!),
                       height: 200,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  
-                  final exists = snapshot.data ?? false;
-                  debugPrint('Photo display: exists=$exists, path=$_photoPath');
-                  
-                  if (!exists) {
-                    // 文件不存在，显示拍照按钮
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _buildPhotoButton(
-                            icon: Icons.camera_alt,
-                            label: '拍照',
-                            onTap: _takePhoto,
-                          ),
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _photoPath = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildPhotoButton(
-                            icon: Icons.photo_library,
-                            label: '从相册选择',
-                            onTap: _pickImage,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  
-                  return Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                        child: Image.file(
-                          File(_photoPath!),
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            debugPrint('Image.file error: $error');
-                            return Container(
-                              height: 200,
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: Text('无法加载图片'),
-                              ),
-                            );
-                          },
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20,
                         ),
                       ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _photoPath = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                ],
               )
             else
               Row(

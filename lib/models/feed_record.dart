@@ -44,16 +44,13 @@ class FeedRecord {
   String get typeDisplay {
     switch (type) {
       case 'breast':
-      case '母乳':
         return '母乳';
       case 'formula':
-      case '奶粉':
         return '配方奶';
       case 'solid':
-      case '辅食':
         return '辅食';
       default:
-        return type; // 直接返回原始值，而不是"其他"
+        return '其他';
     }
   }
 
