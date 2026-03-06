@@ -94,14 +94,14 @@ jobs:
         flutter build apk --release
     
     - name: Upload APK to Artifact
-      if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      if: ${{ !startsWith(github.ref, 'refs/tags/v') && github.event_name != 'workflow_dispatch' }}
       uses: actions/upload-artifact@v4
       with:
         name: baby-growth-apk
         path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
     
-    - name: Upload APK to Release
+    - name: Upload APK to Release (tag push)
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
@@ -110,3 +110,27 @@ jobs:
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload APK to Release (workflow dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        VERSION="v${{ steps.version.outputs.version }}"
+        # Find or create release
+        RELEASE_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION" 2>/dev/null || echo '{}')
+        RELEASE_ID=$(echo "$RELEASE_DATA" | grep '"id":' | head -1 | sed 's/.*: //;s/,//')
+        
+        if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+          # Create release
+          RELEASE_DATA=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d "{\"tag_name\":\"$VERSION\",\"name\":\"宝宝成长记 $VERSION\",\"draft\":false,\"prerelease\":false}")
+          RELEASE_ID=$(echo "$RELEASE_DATA" | grep '"id":' | head -1 | sed 's/.*: //;s/,//')
+        fi
+        
+        # Upload APK
+        curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/vnd.android.package-archive" \
+          "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=app-release.apk" \
+          --data-binary @build/app/outputs/flutter-apk/app-release.apk
