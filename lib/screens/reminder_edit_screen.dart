@@ -3,6 +3,7 @@ import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/reminder.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
 
 class ReminderEditScreen extends StatefulWidget {
   final Baby baby;
@@ -378,6 +379,13 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
     }
 
     if (success && mounted) {
+      // 如果编辑，先取消旧的通知
+      if (_isEditing && widget.reminder != null) {
+        await notificationService.cancelReminder(widget.reminder!);
+      }
+      // 调度新通知
+      await notificationService.scheduleReminder(reminder);
+      
       Navigator.pop(context, true);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -407,6 +415,9 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
     );
 
     if (confirmed == true && widget.reminder?.id != null) {
+      // 取消通知
+      await notificationService.cancelReminder(widget.reminder!);
+      
       final success = await DatabaseService.instance
           .deleteReminder(widget.reminder!.id!);
       if (success && mounted) {
