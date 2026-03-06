@@ -3,6 +3,7 @@ import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/reminder.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/animations.dart';
 import 'reminder_edit_screen.dart';
 
@@ -244,12 +245,22 @@ class _ReminderListScreenState extends State<ReminderListScreen> {
     final updated = reminder.copyWith(isEnabled: isEnabled);
     final success = await DatabaseService.instance.updateReminder(updated);
     if (success && mounted) {
+      if (isEnabled) {
+        // 启用：调度通知
+        await notificationService.scheduleReminder(updated);
+      } else {
+        // 禁用：取消通知
+        await notificationService.cancelReminder(reminder);
+      }
       _loadReminders();
     }
   }
 
   Future<void> _deleteReminder(Reminder reminder) async {
     if (reminder.id == null) return;
+    
+    // 取消通知
+    await notificationService.cancelReminder(reminder);
     
     final success = await DatabaseService.instance.deleteReminder(reminder.id!);
     if (success && mounted) {
