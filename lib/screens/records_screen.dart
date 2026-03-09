@@ -146,7 +146,16 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                   type: type,
                   amount: double.tryParse(amountController.text),
                 );
-                await DatabaseService.instance.updateFeedRecord(updated);
+                final result = await DatabaseService.instance.updateFeedRecord(updated);
+                if (!result) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
               },
@@ -198,7 +207,16 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                 height: double.tryParse(heightController.text),
                 headCircumference: double.tryParse(headController.text),
               );
-              await DatabaseService.instance.updateGrowthRecord(updated);
+              final result = await DatabaseService.instance.updateGrowthRecord(updated);
+              if (!result) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('保存失败，请重试')),
+                  );
+                }
+                return;
+              }
               Navigator.pop(context);
               await _loadData();
             },
@@ -646,7 +664,16 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                   startTime: startTime,
                   endTime: endTime,
                 );
-                await DatabaseService.instance.updateSleepRecord(updated);
+                final result = await DatabaseService.instance.updateSleepRecord(updated);
+                if (!result) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
               },
@@ -714,7 +741,16 @@ class _RecordsScreenState extends State<RecordsScreen> with SingleTickerProvider
                   type: diaperType,
                   time: time,
                 );
-                await DatabaseService.instance.updateDiaperRecord(updated);
+                final result = await DatabaseService.instance.updateDiaperRecord(updated);
+                if (!result) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
               },

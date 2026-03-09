@@ -301,13 +301,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       birthHeadCircumference: double.tryParse(headController.text),
                     ),
                   );
-                  if (newBaby != null) {
-                    Navigator.pop(context);
-                    setState(() => _baby = newBaby);
-                    final babyId = newBaby.id;
-                    if (babyId != null) {
-                      await _loadBabyData(babyId);
+                  if (newBaby == null) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('保存失败，请重试')),
+                      );
                     }
+                    return;
+                  }
+                  Navigator.pop(context);
+                  setState(() => _baby = newBaby);
+                  final babyId = newBaby.id;
+                  if (babyId != null) {
+                    await _loadBabyData(babyId);
                   }
                 }
               },
@@ -1027,7 +1034,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     amount: double.tryParse(amountController.text) ?? 0,
                     time: DateTime.now(),
                   );
-                  await DatabaseService.instance.createFeedRecord(record);
+                  final result = await DatabaseService.instance.createFeedRecord(record);
+                  if (result == null) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('保存失败，请重试')),
+                      );
+                    }
+                    return;
+                  }
                   await _loadBabyData(babyId);
                   if (mounted) Navigator.pop(context);
                 }
@@ -1060,7 +1076,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   babyId: babyId,
                   startTime: DateTime.now(),
                 );
-                await DatabaseService.instance.createSleepRecord(record);
+                final result = await DatabaseService.instance.createSleepRecord(record);
+                if (result == null) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 await _loadBabyData(babyId);
                 if (mounted) {
                   Navigator.pop(context);
@@ -1114,7 +1139,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 final updatedRecord = ongoingSleep.copyWith(
                   endTime: DateTime.now(),
                 );
-                await DatabaseService.instance.updateSleepRecord(updatedRecord);
+                final result = await DatabaseService.instance.updateSleepRecord(updatedRecord);
+                if (!result) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 await _loadBabyData(babyId);
                 if (mounted) {
                   Navigator.pop(context);
@@ -1170,7 +1204,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     time: DateTime.now(),
                     type: diaperType,
                   );
-                  await DatabaseService.instance.createDiaperRecord(record);
+                  final result = await DatabaseService.instance.createDiaperRecord(record);
+                  if (result == null) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('保存失败，请重试')),
+                      );
+                    }
+                    return;
+                  }
                   await _loadBabyData(babyId);
                   if (mounted) {
                     Navigator.pop(context);
@@ -1250,7 +1293,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: double.tryParse(heightController.text),
                   headCircumference: double.tryParse(headController.text),
                 );
-                await DatabaseService.instance.createGrowthRecord(record);
+                final result = await DatabaseService.instance.createGrowthRecord(record);
+                if (result == null) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 await _loadBabyData(babyId);
                 if (mounted) Navigator.pop(context);
               }

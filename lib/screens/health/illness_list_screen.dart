@@ -235,7 +235,16 @@ class _IllnessListScreenState extends State<IllnessListScreen> {
                   description: descController.text,
                   treatment: treatmentController.text,
                 );
-                await DatabaseService.instance.createIllnessRecord(record);
+                final result = await DatabaseService.instance.createIllnessRecord(record);
+                if (result == null) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
                 if (mounted) {

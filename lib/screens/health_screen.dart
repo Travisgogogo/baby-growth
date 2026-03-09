@@ -70,7 +70,15 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
 
   Future<void> _markVaccineCompleted(VaccineRecord record) async {
     final updated = record.copyWith(completed: true, completedDate: DateTime.now());
-    await DatabaseService.instance.updateVaccineRecord(updated);
+    final result = await DatabaseService.instance.updateVaccineRecord(updated);
+    if (!result) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('保存失败，请重试')),
+        );
+      }
+      return;
+    }
     await _loadData();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${record.name}已标记完成')),
@@ -79,7 +87,15 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
 
   Future<void> _markRecovered(IllnessRecord record) async {
     final updated = record.copyWith(endTime: DateTime.now());
-    await DatabaseService.instance.updateIllnessRecord(updated);
+    final result = await DatabaseService.instance.updateIllnessRecord(updated);
+    if (!result) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('保存失败，请重试')),
+        );
+      }
+      return;
+    }
     await _loadData();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已标记痊愈')),
@@ -139,7 +155,16 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   description: descController.text,
                   treatment: treatmentController.text,
                 );
-                await DatabaseService.instance.createIllnessRecord(record);
+                final result = await DatabaseService.instance.createIllnessRecord(record);
+                if (result == null) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -509,7 +534,16 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                   completed: isCompleted,
                   completedDate: isCompleted ? completedDate : null,
                 );
-                await DatabaseService.instance.updateVaccineRecord(updated);
+                final result = await DatabaseService.instance.updateVaccineRecord(updated);
+                if (!result) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
               },
@@ -825,7 +859,16 @@ class _HealthScreenState extends State<HealthScreen> with SingleTickerProviderSt
                       ? scheduledController.text 
                       : '自定义',
                 );
-                await DatabaseService.instance.createVaccineRecord(record);
+                final result = await DatabaseService.instance.createVaccineRecord(record);
+                if (result == null) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('保存失败，请重试')),
+                    );
+                  }
+                  return;
+                }
                 Navigator.pop(context);
                 await _loadData();
                 if (mounted) {

@@ -148,7 +148,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       if (photo != null && _baby != null) {
         final updatedBaby = _baby!.copyWith(avatarPath: photo.path);
-        await DatabaseService.instance.updateBaby(updatedBaby);
+        final result = await DatabaseService.instance.updateBaby(updatedBaby);
+        if (!result) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('保存失败，请重试')),
+            );
+          }
+          return;
+        }
         setState(() => _baby = updatedBaby);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -177,7 +185,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       if (image != null && _baby != null) {
         final updatedBaby = _baby!.copyWith(avatarPath: image.path);
-        await DatabaseService.instance.updateBaby(updatedBaby);
+        final result = await DatabaseService.instance.updateBaby(updatedBaby);
+        if (!result) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('保存失败，请重试')),
+            );
+          }
+          return;
+        }
         setState(() => _baby = updatedBaby);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -219,7 +235,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (confirmed == true) {
       final updatedBaby = _baby!.copyWith(avatarPath: null);
-      await DatabaseService.instance.updateBaby(updatedBaby);
+      final result = await DatabaseService.instance.updateBaby(updatedBaby);
+      if (!result) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败，请重试')),
+          );
+        }
+        return;
+      }
       setState(() => _baby = updatedBaby);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -336,7 +360,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     birthHeadCircumference: double.tryParse(headController.text),
                   );
                   // 更新数据库
-                  await DatabaseService.instance.updateBaby(updatedBaby);
+                  final result = await DatabaseService.instance.updateBaby(updatedBaby);
+                  if (!result) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('保存失败，请重试')),
+                      );
+                    }
+                    return;
+                  }
                   setState(() => _baby = updatedBaby);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
