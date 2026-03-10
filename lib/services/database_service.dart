@@ -902,9 +902,33 @@ class DatabaseService {
   }
 
   // Reminder operations
+  Future<void> _ensureRemindersTable(Database db) async {
+    try {
+      await db.query('reminders', limit: 0);
+    } catch (e) {
+      // 表不存在，创建它
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          babyId INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          time TEXT NOT NULL,
+          isEnabled INTEGER NOT NULL DEFAULT 1,
+          isRepeating INTEGER NOT NULL DEFAULT 0,
+          repeatDays TEXT,
+          createdAt TEXT NOT NULL,
+          FOREIGN KEY (babyId) REFERENCES babies (id)
+        )
+      ''');
+      debugPrint('创建 reminders 表成功');
+    }
+  }
+
   Future<Reminder?> createReminder(Reminder reminder) async {
     try {
       final db = await database;
+      await _ensureRemindersTable(db);
       final id = await db.insert('reminders', reminder.toMap());
       return reminder.copyWith(id: id);
     } catch (e) {
@@ -916,6 +940,7 @@ class DatabaseService {
   Future<List<Reminder>> getReminders(int babyId) async {
     try {
       final db = await database;
+      await _ensureRemindersTable(db);
       final maps = await db.query(
         'reminders',
         where: 'babyId = ?',
@@ -932,6 +957,7 @@ class DatabaseService {
   Future<List<Reminder>> getEnabledReminders(int babyId) async {
     try {
       final db = await database;
+      await _ensureRemindersTable(db);
       final maps = await db.query(
         'reminders',
         where: 'babyId = ? AND isEnabled = 1',
@@ -948,6 +974,7 @@ class DatabaseService {
   Future<bool> updateReminder(Reminder reminder) async {
     try {
       final db = await database;
+      await _ensureRemindersTable(db);
       await db.update(
         'reminders',
         reminder.toMap(),
@@ -964,6 +991,7 @@ class DatabaseService {
   Future<bool> deleteReminder(int id) async {
     try {
       final db = await database;
+      await _ensureRemindersTable(db);
       await db.delete(
         'reminders',
         where: 'id = ?',
