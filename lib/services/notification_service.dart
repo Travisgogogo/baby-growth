@@ -97,29 +97,42 @@ class NotificationService {
   Future<void> scheduleReminder(Reminder reminder) async {
     if (!reminder.isEnabled) return;
 
-    final id = reminder.id ?? reminder.hashCode;
+    // 确保有有效的ID
+    final id = reminder.id ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    debugPrint('调度提醒: id=$id, title=${reminder.title}, time=${reminder.time}');
+    
     final title = _getReminderTitle(reminder.title);
     final body = reminder.description ?? _getDefaultBody(reminder.title);
 
-    if (reminder.isRepeating && reminder.repeatDays != null && reminder.repeatDays!.isNotEmpty) {
-      // 重复提醒：为每个选中的星期几创建单独的通知
-      for (final day in reminder.repeatDays!) {
-        await _scheduleWeeklyNotification(
-          id: id * 10 + day, // 生成唯一 ID
+    try {
+      if (reminder.isRepeating && reminder.repeatDays != null && reminder.repeatDays!.isNotEmpty) {
+        // 重复提醒：为每个选中的星期几创建单独的通知
+        for (final day in reminder.repeatDays!) {
+          final notificationId = id * 10 + day; // 生成唯一 ID
+          debugPrint('调度重复通知: id=$notificationId, day=$day');
+          await _scheduleWeeklyNotification(
+            id: notificationId,
+            title: title,
+            body: body,
+            time: reminder.time,
+            day: day,
+          );
+        }
+      } else {
+        // 一次性提醒
+        debugPrint('调度一次性通知: id=$id');
+        await _scheduleOneTimeNotification(
+          id: id,
           title: title,
           body: body,
           time: reminder.time,
-          day: day,
         );
       }
-    } else {
-      // 一次性提醒
-      await _scheduleOneTimeNotification(
-        id: id,
-        title: title,
-        body: body,
-        time: reminder.time,
-      );
+      debugPrint('调度提醒完成');
+    } catch (e, stack) {
+      debugPrint('scheduleReminder 错误: $e');
+      debugPrint('Stack: $stack');
+      rethrow;
     }
   }
 
@@ -130,21 +143,30 @@ class NotificationService {
     required String body,
     required DateTime time,
   }) async {
-    // 如果时间已过，设置为明天
-    var scheduledTime = time;
-    if (scheduledTime.isBefore(DateTime.now())) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
-    }
+    try {
+      // 如果时间已过，设置为明天
+      var scheduledTime = time;
+      if (scheduledTime.isBefore(DateTime.now())) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      }
 
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(scheduledTime, tz.local),
-      _buildNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-    );
+      debugPrint('调度一次性通知: id=$id, time=$scheduledTime');
+      
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        tz.TZDateTime.from(scheduledTime, tz.local),
+        _buildNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      debugPrint('一次性通知调度成功');
+    } catch (e, stack) {
+      debugPrint('_scheduleOneTimeNotification 错误: $e');
+      debugPrint('Stack: $stack');
+      rethrow;
+    }
   }
 
   /// 调度每周重复通知
@@ -155,16 +177,26 @@ class NotificationService {
     required DateTime time,
     required int day, // 0=周日, 1=周一...
   }) async {
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      _nextInstanceOfWeeklyTime(time, day),
-      _buildNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
+    try {
+      final scheduledTime = _nextInstanceOfWeeklyTime(time, day);
+      debugPrint('调度每周通知: id=$id, day=$day, time=$scheduledTime');
+      
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        _buildNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+      debugPrint('每周通知调度成功: id=$id');
+    } catch (e, stack) {
+      debugPrint('_scheduleWeeklyNotification 错误: $e');
+      debugPrint('Stack: $stack');
+      rethrow;
+    }
   }
 
   /// 计算下一次每周提醒时间

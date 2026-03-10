@@ -370,27 +370,61 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
       repeatDays: _isRepeating ? (_selectedDays.toList()..sort()) : null,
     );
 
-    bool success;
-    if (_isEditing) {
-      success = await DatabaseService.instance.updateReminder(reminder);
-    } else {
-      final result = await DatabaseService.instance.createReminder(reminder);
-      success = result != null;
+    // 先保存到数据库
+    Reminder? savedReminder;
+    bool dbSuccess;
+    
+    try {
+      if (_isEditing) {
+        dbSuccess = await DatabaseService.instance.updateReminder(reminder);
+        savedReminder = reminder;
+        debugPrint('更新提醒结果: $dbSuccess');
+      } else {
+        savedReminder = await DatabaseService.instance.createReminder(reminder);
+        dbSuccess = savedReminder != null;
+        debugPrint('创建提醒结果: $savedReminder');
+      }
+    } catch (e, stack) {
+      debugPrint('数据库保存失败: $e');
+      debugPrint('Stack: $stack');
+      dbSuccess = false;
     }
 
-    if (success && mounted) {
+    if (!dbSuccess || savedReminder == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: 数据库错误')),
+        );
+      }
+      return;
+    }
+
+    // 数据库保存成功，再调度通知
+    try {
       // 如果编辑，先取消旧的通知
       if (_isEditing && widget.reminder != null) {
         await notificationService.cancelReminder(widget.reminder!);
+        debugPrint('取消旧通知成功');
       }
-      // 调度新通知
-      await notificationService.scheduleReminder(reminder);
       
-      Navigator.pop(context, true);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存失败，请重试')),
-      );
+      // 调度新通知
+      await notificationService.scheduleReminder(savedReminder);
+      debugPrint('调度通知成功');
+      
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e, stack) {
+      debugPrint('通知调度失败: $e');
+      debugPrint('Stack: $stack');
+      
+      // 通知失败但数据已保存，仍然返回成功
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('提醒已保存，但通知设置失败: $e')),
+        );
+        Navigator.pop(context, true);
+      }
     }
   }
 
