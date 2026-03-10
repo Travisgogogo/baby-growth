@@ -929,10 +929,16 @@ class DatabaseService {
     try {
       final db = await database;
       await _ensureRemindersTable(db);
+      
+      debugPrint('准备插入提醒: ${reminder.toMap()}');
+      
       final id = await db.insert('reminders', reminder.toMap());
+      debugPrint('提醒插入成功, id=$id');
+      
       return reminder.copyWith(id: id);
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('创建提醒失败: $e');
+      debugPrint('Stack: $stack');
       return null;
     }
   }

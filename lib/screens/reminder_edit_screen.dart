@@ -372,7 +372,8 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
 
     // 先保存到数据库
     Reminder? savedReminder;
-    bool dbSuccess;
+    bool dbSuccess = false;
+    String? errorMsg;
     
     try {
       if (_isEditing) {
@@ -387,13 +388,14 @@ class _ReminderEditScreenState extends State<ReminderEditScreen> {
     } catch (e, stack) {
       debugPrint('数据库保存失败: $e');
       debugPrint('Stack: $stack');
+      errorMsg = e.toString();
       dbSuccess = false;
     }
 
     if (!dbSuccess || savedReminder == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: 数据库错误')),
+          SnackBar(content: Text('保存失败${errorMsg != null ? ": $errorMsg" : ""}')),
         );
       }
       return;

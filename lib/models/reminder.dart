@@ -30,7 +30,7 @@ class Reminder {
       'time': time.toIso8601String(),
       'isEnabled': isEnabled ? 1 : 0,
       'isRepeating': isRepeating ? 1 : 0,
-      'repeatDays': repeatDays?.join(','),
+      'repeatDays': repeatDays != null && repeatDays!.isNotEmpty ? repeatDays!.join(',') : null,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -44,8 +44,8 @@ class Reminder {
       time: DateTime.parse(map['time'] as String),
       isEnabled: map['isEnabled'] == 1,
       isRepeating: map['isRepeating'] == 1,
-      repeatDays: map['repeatDays'] != null
-          ? (map['repeatDays'] as String).split(',').map((e) => int.parse(e)).toList()
+      repeatDays: (map['repeatDays'] as String?)?.isNotEmpty == true
+          ? (map['repeatDays'] as String).split(',').where((e) => e.isNotEmpty).map((e) => int.parse(e)).toList()
           : null,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );
