@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants/app_theme.dart';
 import '../models/baby.dart';
 import '../models/reminder.dart';
@@ -19,11 +20,13 @@ class ReminderListScreen extends StatefulWidget {
 class _ReminderListScreenState extends State<ReminderListScreen> {
   List<Reminder> _reminders = [];
   bool _isLoading = true;
+  bool _hasNotificationPermission = true;
 
   @override
   void initState() {
     super.initState();
     _loadReminders();
+    _checkNotificationPermission();
   }
 
   Future<void> _loadReminders() async {
@@ -44,6 +47,13 @@ class _ReminderListScreenState extends State<ReminderListScreen> {
     }
   }
 
+  Future<void> _checkNotificationPermission() async {
+    final hasPermission = await notificationService.checkPermission();
+    if (mounted) {
+      setState(() => _hasNotificationPermission = hasPermission);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,18 +63,115 @@ class _ReminderListScreenState extends State<ReminderListScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active),
+            tooltip: '测试通知',
+            onPressed: _showTestNotification,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _reminders.isEmpty
-              ? _buildEmptyState()
-              : _buildReminderList(),
+          : Column(
+              children: [
+                if (!_hasNotificationPermission) _buildPermissionBanner(),
+                Expanded(
+                  child: _reminders.isEmpty
+                      ? _buildEmptyState()
+                      : _buildReminderList(),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToEdit(),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Widget _buildPermissionBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+              const SizedBox(width: 8),
+              Text(
+                '通知权限未开启',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '请在系统设置中开启通知权限，否则提醒功能无法正常工作。',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.orange.shade800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _requestPermission,
+                  child: const Text('重新请求权限'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _openSystemSettings,
+                  child: const Text('去设置开启'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _requestPermission() async {
+    final granted = await notificationService.requestPermission();
+    setState(() => _hasNotificationPermission = granted);
+    if (granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('通知权限已开启')),
+      );
+    }
+  }
+
+  Future<void> _openSystemSettings() async {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请手动在系统设置中开启通知权限')),
+      );
+    }
+  }
+
+  Future<void> _showTestNotification() async {
+    await notificationService.showTestNotification();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('测试通知已发送，请查看通知栏')),
+      );
+    }
   }
 
   Widget _buildEmptyState() {

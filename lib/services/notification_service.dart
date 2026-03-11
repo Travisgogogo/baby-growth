@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -91,6 +93,17 @@ class NotificationService {
       return enabled ?? false;
     }
     return true;
+  }
+
+  /// 检查通知权限状态（返回详细状态）
+  Future<NotificationPermissionStatus> checkPermissionStatus() async {
+    final hasPermission = await checkPermission();
+    
+    if (!hasPermission) {
+      return NotificationPermissionStatus.denied;
+    }
+    
+    return NotificationPermissionStatus.granted;
   }
 
   /// 调度提醒通知
@@ -252,6 +265,22 @@ class NotificationService {
     }
     return '宝宝成长提醒';
   }
+
+  /// 测试通知 - 立即发送一个测试通知
+  Future<void> showTestNotification() async {
+    await _notifications.show(
+      999999,
+      '测试提醒',
+      '如果宝宝成长记可以收到这条通知，说明通知功能正常！',
+      _buildNotificationDetails(),
+    );
+  }
+}
+
+/// 通知权限状态
+enum NotificationPermissionStatus {
+  granted,
+  denied,
 }
 
 /// 全局通知服务实例
