@@ -420,6 +420,54 @@ class NotificationService {
     await _notifications.cancelAll();
   }
 
+  /// 立即显示一个测试通知（用于验证通知功能）
+  Future<bool> showTestNotification() async {
+    try {
+      debugPrint('发送测试通知...');
+      
+      await _notifications.show(
+        999999, // 测试通知ID
+        '测试通知',
+        '如果您看到这条消息，说明通知功能正常工作！',
+        _buildNotificationDetails(payload: 'test'),
+      );
+      
+      debugPrint('测试通知已发送');
+      return true;
+    } catch (e, stack) {
+      debugPrint('发送测试通知失败: $e');
+      debugPrint('Stack: $stack');
+      return false;
+    }
+  }
+
+  /// 调度一个5秒后的测试通知（用于验证定时通知）
+  Future<bool> scheduleTestNotification() async {
+    try {
+      debugPrint('调度测试通知（5秒后）...');
+      
+      final scheduledTime = DateTime.now().add(const Duration(seconds: 5));
+      final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
+      
+      await _notifications.zonedSchedule(
+        999998,
+        '定时测试通知',
+        '定时通知功能正常！',
+        tzScheduledTime,
+        _buildNotificationDetails(payload: 'test_scheduled'),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      
+      debugPrint('测试通知已调度，将在5秒后触发');
+      return true;
+    } catch (e, stack) {
+      debugPrint('调度测试通知失败: $e');
+      debugPrint('Stack: $stack');
+      return false;
+    }
+  }
+
   /// 获取所有待处理的通知
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();

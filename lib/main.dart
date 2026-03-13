@@ -24,6 +24,9 @@ void main() async {
     onNotificationTap: _handleNotificationTap,
   );
   
+  // 发送测试通知（立即）
+  await notificationService.showTestNotification();
+  
   // 调度所有已启用的提醒
   await _scheduleAllEnabledReminders();
   
@@ -40,21 +43,39 @@ void _handleNotificationTap(String? payload) {
 /// 调度所有已启用的提醒
 Future<void> _scheduleAllEnabledReminders() async {
   try {
+    print('=== 开始调度提醒 ===');
     final babies = await DatabaseService.instance.getAllBabies();
+    print('获取到 ${babies.length} 个宝宝');
+    
     if (babies.isNotEmpty) {
       final baby = babies.first;
+      print('使用宝宝: ${baby.name}, ID: ${baby.id}');
+      
       if (baby.id != null) {
         final reminders = await DatabaseService.instance.getEnabledReminders(baby.id!);
+        print('获取到 ${reminders.length} 个启用的提醒');
+        
         int successCount = 0;
         for (final reminder in reminders) {
+          print('正在调度提醒: ${reminder.title} at ${reminder.time}');
           final success = await notificationService.scheduleReminder(reminder);
-          if (success) successCount++;
+          if (success) {
+            successCount++;
+            print('✓ 提醒调度成功: ${reminder.title}');
+          } else {
+            print('✗ 提醒调度失败: ${reminder.title}');
+          }
         }
-        print('已调度 $successCount/${reminders.length} 个提醒');
+        print('=== 调度完成: $successCount/${reminders.length} 个提醒成功 ===');
+      } else {
+        print('错误: 宝宝ID为空');
       }
+    } else {
+      print('没有宝宝数据，跳过调度');
     }
-  } catch (e) {
+  } catch (e, stack) {
     print('调度提醒失败: $e');
+    print('Stack: $stack');
   }
 }
 
