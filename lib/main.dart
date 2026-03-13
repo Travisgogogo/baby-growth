@@ -142,6 +142,30 @@ class _BabyGrowthAppState extends State<BabyGrowthApp> with WidgetsBindingObserv
     );
   }
 
+  /// 显示权限被拒绝提示
+  void _showPermissionDeniedDialog(String permissionName) {
+    showDialog(
+      context: _navigatorKey.currentContext!,
+      builder: (context) => AlertDialog(
+        title: Text('$permissionName被拒绝'),
+        content: Text('没有$permissionName，提醒功能将无法正常工作。请在系统设置中开启。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('知道了'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _openAppSettings();
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 显示精确闹钟权限引导对话框
   void _showExactAlarmPermissionDialog() {
     showDialog(
