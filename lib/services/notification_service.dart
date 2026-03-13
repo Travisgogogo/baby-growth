@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/reminder.dart';
+
+/// 通知点击回调函数类型
+typedef OnNotificationTap = void Function(String? payload);
 
 /// 本地通知服务
 class NotificationService {
@@ -14,11 +19,15 @@ class NotificationService {
   static const String _channelId = 'baby_growth_reminder';
   static const String _channelName = '宝宝成长提醒';
   static const String _channelDesc = '用于喂养、睡眠、换尿布和疫苗提醒';
+  static const String _payloadReminder = 'reminder';
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  OnNotificationTap? _onNotificationTapCallback;
 
   /// 初始化通知服务
-  Future<void> init() async {
+  Future<void> init({OnNotificationTap? onNotificationTap}) async {
+    _onNotificationTapCallback = onNotificationTap;
+    
     // 初始化时区数据
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
@@ -40,7 +49,8 @@ class NotificationService {
 
     await _notifications.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
+      onDidReceiveNotificationResponse: _onNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
     );
 
     // 创建通知渠道（Android）
@@ -63,13 +73,42 @@ class NotificationService {
         ?.createNotificationChannel(channel);
   }
 
-  /// 通知点击回调
-  void _onNotificationTap(NotificationResponse response) {
-    print('通知被点击: ${response.payload}');
+  /// 通知响应回调（前台）
+  void _onNotificationResponse(NotificationResponse response) {
+    debugPrint('通知被点击: payload=${response.payload}, actionId=${response.actionId}');
+    if (_onNotificationTapCallback != null) {
+      _onNotificationTapCallback!(response.payload);
+    }
+  }
+
+  /// 后台通知响应回调
+  @pragma('vm:entry-point')
+  static void _onBackgroundNotificationResponse(NotificationResponse response) {
+    debugPrint('后台通知被点击: payload=${response.payload}');
+    // 后台处理，实际跳转需要在应用恢复时处理
+  }
+
+  /// 检查是否可以调度精确闹钟（Android 14+）
+  Future<bool> canScheduleExactAlarms() async {
+    if (Platform.isAndroid) {
+      final androidImpl = _notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl != null) {
+        try {
+          final canSchedule = await androidImpl.canScheduleExactNotifications();
+          return canSchedule ?? false;
+        } catch (e) {
+          debugPrint('检查精确闹钟权限失败: $e');
+          // 旧版本 SDK 可能没有此方法，返回 true
+          return true;
+        }
+      }
+    }
+    return true;
   }
 
   /// 请求通知权限
-  Future<bool> requestPermission() async {
+  Future<bool> requestNotificationPermission() async {
     final androidImplementation = _notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     
@@ -83,7 +122,7 @@ class NotificationService {
   }
 
   /// 检查是否有通知权限
-  Future<bool> checkPermission() async {
+  Future<bool> checkNotificationPermission() async {
     final androidImplementation = _notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     
@@ -94,16 +133,44 @@ class NotificationService {
     return true;
   }
 
-  /// 调度提醒通知
-  Future<void> scheduleReminder(Reminder reminder) async {
-    if (!reminder.isEnabled) return;
+  /// 检查并请求所有必要权限
+  /// 返回: (hasNotificationPermission, hasExactAlarmPermission)
+  Future<(bool, bool)> checkAndRequestPermissions() async {
+    bool notificationPermission = await checkNotificationPermission();
+    bool exactAlarmPermission = await canScheduleExactAlarms();
 
+    // 如果没有通知权限，请求它
+    if (!notificationPermission) {
+      notificationPermission = await requestNotificationPermission();
+    }
+
+    return (notificationPermission, exactAlarmPermission);
+  }
+
+  /// 调度提醒通知
+  Future<bool> scheduleReminder(Reminder reminder) async {
+    if (!reminder.isEnabled) return true;
+
+    // 检查是否可以调度精确闹钟
+    final canSchedule = await canScheduleExactAlarms();
+    if (!canSchedule) {
+      debugPrint('无法调度精确闹钟，请检查权限');
+      // 仍然尝试使用非精确模式调度
+      return await _scheduleReminderWithMode(reminder, useExactMode: false);
+    }
+
+    return await _scheduleReminderWithMode(reminder, useExactMode: true);
+  }
+
+  /// 调度提醒（指定模式）
+  Future<bool> _scheduleReminderWithMode(Reminder reminder, {required bool useExactMode}) async {
     // 确保有有效的ID
     final id = reminder.id ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    debugPrint('调度提醒: id=$id, title=${reminder.title}, time=${reminder.time}');
+    debugPrint('调度提醒: id=$id, title=${reminder.title}, time=${reminder.time}, exactMode=$useExactMode');
     
     final title = _getReminderTitle(reminder.title);
     final body = reminder.description ?? _getDefaultBody(reminder.title);
+    final payload = '$_payloadReminder|${reminder.id}|${reminder.title}';
 
     try {
       if (reminder.isRepeating && reminder.repeatDays != null && reminder.repeatDays!.isNotEmpty) {
@@ -115,8 +182,10 @@ class NotificationService {
             id: notificationId,
             title: title,
             body: body,
+            payload: payload,
             time: reminder.time,
             day: day,
+            useExactMode: useExactMode,
           );
         }
       } else {
@@ -126,14 +195,17 @@ class NotificationService {
           id: id,
           title: title,
           body: body,
+          payload: payload,
           time: reminder.time,
+          useExactMode: useExactMode,
         );
       }
       debugPrint('调度提醒完成');
+      return true;
     } catch (e, stack) {
       debugPrint('scheduleReminder 错误: $e');
       debugPrint('Stack: $stack');
-      rethrow;
+      return false;
     }
   }
 
@@ -142,7 +214,9 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    required String payload,
     required DateTime time,
+    required bool useExactMode,
   }) async {
     try {
       // 如果时间已过，设置为明天
@@ -151,15 +225,17 @@ class NotificationService {
         scheduledTime = scheduledTime.add(const Duration(days: 1));
       }
 
-      debugPrint('调度一次性通知: id=$id, time=$scheduledTime');
+      debugPrint('调度一次性通知: id=$id, time=$scheduledTime, exact=$useExactMode');
       
       await _notifications.zonedSchedule(
         id,
         title,
         body,
         tz.TZDateTime.from(scheduledTime, tz.local),
-        _buildNotificationDetails(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        _buildNotificationDetails(payload: payload),
+        androidScheduleMode: useExactMode 
+            ? AndroidScheduleMode.exactAllowWhileIdle 
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
       debugPrint('一次性通知调度成功');
@@ -175,20 +251,24 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    required String payload,
     required DateTime time,
     required int day, // 0=周日, 1=周一...
+    required bool useExactMode,
   }) async {
     try {
       final scheduledTime = _nextInstanceOfWeeklyTime(time, day);
-      debugPrint('调度每周通知: id=$id, day=$day, time=$scheduledTime');
+      debugPrint('调度每周通知: id=$id, day=$day, time=$scheduledTime, exact=$useExactMode');
       
       await _notifications.zonedSchedule(
         id,
         title,
         body,
         scheduledTime,
-        _buildNotificationDetails(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        _buildNotificationDetails(payload: payload),
+        androidScheduleMode: useExactMode 
+            ? AndroidScheduleMode.exactAllowWhileIdle 
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
@@ -227,7 +307,7 @@ class NotificationService {
   }
 
   /// 构建通知详情
-  NotificationDetails _buildNotificationDetails() {
+  NotificationDetails _buildNotificationDetails({String? payload}) {
     return NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
@@ -238,6 +318,12 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         icon: '@mipmap/ic_launcher',
+        // 点击通知后自动清除
+        autoCancel: true,
+        // 通知 payload
+        styleInformation: payload != null 
+            ? DefaultStyleInformation(true, true) 
+            : null,
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -267,6 +353,11 @@ class NotificationService {
     await _notifications.cancelAll();
   }
 
+  /// 获取所有待处理的通知
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    return await _notifications.pendingNotificationRequests();
+  }
+
   /// 获取提醒标题
   String _getReminderTitle(String title) {
     return title;
@@ -274,14 +365,22 @@ class NotificationService {
 
   /// 获取默认提醒内容
   String _getDefaultBody(String title) {
-    if (title.contains('喂养') || title.contains('喝奶')) {
+    if (title.contains('喂养') || title.contains('喝奶') || title.contains('奶')) {
       return '该给宝宝喂奶啦～';
-    } else if (title.contains('睡眠') || title.contains('睡觉')) {
+    } else if (title.contains('睡眠') || title.contains('睡觉') || title.contains('哄睡')) {
       return '该哄宝宝睡觉啦～';
-    } else if (title.contains('换尿布') || title.contains('尿不湿')) {
+    } else if (title.contains('换尿布') || title.contains('尿不湿') || title.contains('尿布')) {
       return '该给宝宝换尿布啦～';
-    } else if (title.contains('疫苗')) {
+    } else if (title.contains('疫苗') || title.contains('接种') || title.contains('打针')) {
       return '别忘了疫苗接种哦～';
+    } else if (title.contains('辅食') || title.contains('吃饭') || title.contains('米粉')) {
+      return '该给宝宝吃辅食啦～';
+    } else if (title.contains('洗澡') || title.contains('沐浴')) {
+      return '该给宝宝洗澡啦～';
+    } else if (title.contains('体温') || title.contains('量体温')) {
+      return '该给宝宝量体温啦～';
+    } else if (title.contains('吃药') || title.contains('服药')) {
+      return '该给宝宝吃药啦～';
     }
     return '宝宝成长提醒';
   }
