@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'constants/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/reminder_list_screen.dart';
@@ -85,29 +86,60 @@ class _BabyGrowthAppState extends State<BabyGrowthApp> with WidgetsBindingObserv
 
   /// 检查通知权限
   Future<void> _checkPermissions() async {
-    final (hasNotification, hasExactAlarm) = await notificationService.checkAndRequestPermissions();
+    final (hasNotification, hasExactAlarm, hasBatteryOpt) = await notificationService.checkAndRequestPermissions();
     
-    print('权限状态: 通知=$hasNotification, 精确闹钟=$hasExactAlarm');
+    print('权限状态: 通知=$hasNotification, 精确闹钟=$hasExactAlarm, 电池优化=$hasBatteryOpt');
     
     if (!hasNotification) {
-      // 通知权限被拒绝，可以显示提示
       if (mounted) {
         _showPermissionDeniedDialog('通知权限');
       }
     }
     
     if (!hasExactAlarm) {
-      // 精确闹钟权限被拒绝，显示提示引导用户开启
       if (mounted) {
         _showExactAlarmPermissionDialog();
       }
     }
+    
+    if (!hasBatteryOpt) {
+      if (mounted) {
+        _showBatteryOptimizationDialog();
+      }
+    }
   }
 
-  /// 显示权限被拒绝提示
-  void _showPermissionDeniedDialog(String permissionName) {
-    // 这里可以选择是否显示提示，首次启动不建议立即弹窗
-    print('$permissionName 被拒绝');
+  /// 显示电池优化权限引导对话框
+  void _showBatteryOptimizationDialog() {
+    showDialog(
+      context: _navigatorKey.currentContext!,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('需要电池优化权限'),
+        content: const Text(
+          '为了确保提醒能够准时送达，需要您允许应用忽略电池优化。\n\n'
+          '否则系统可能会在后台杀死应用，导致提醒无法触发。\n\n'
+          '请在设置中找到"电池优化"，选择"不优化"。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final granted = await notificationService.requestIgnoreBatteryOptimizations();
+              if (!granted && mounted) {
+                // 如果请求失败，打开设置页面
+                _openAppSettings();
+              }
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 显示精确闹钟权限引导对话框
@@ -140,10 +172,9 @@ class _BabyGrowthAppState extends State<BabyGrowthApp> with WidgetsBindingObserv
   }
 
   /// 打开应用设置
-  void _openAppSettings() {
-    // 使用 permission_handler 或 app_settings 包打开设置
-    // 这里简化处理，实际使用时可以添加 app_settings 依赖
-    print('打开应用设置');
+  void _openAppSettings() async {
+    print('正在打开应用设置...');
+    await openAppSettings();
   }
 
   @override

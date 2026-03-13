@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/reminder.dart';
@@ -88,6 +89,36 @@ class NotificationService {
     // 后台处理，实际跳转需要在应用恢复时处理
   }
 
+  /// 检查电池优化状态（Android）
+  Future<bool> isIgnoringBatteryOptimizations() async {
+    if (Platform.isAndroid) {
+      try {
+        final status = await Permission.ignoreBatteryOptimizations.status;
+        debugPrint('电池优化状态: $status');
+        return status.isGranted;
+      } catch (e) {
+        debugPrint('检查电池优化状态失败: $e');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// 请求忽略电池优化（Android）
+  Future<bool> requestIgnoreBatteryOptimizations() async {
+    if (Platform.isAndroid) {
+      try {
+        final status = await Permission.ignoreBatteryOptimizations.request();
+        debugPrint('请求忽略电池优化结果: $status');
+        return status.isGranted;
+      } catch (e) {
+        debugPrint('请求忽略电池优化失败: $e');
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// 检查是否可以调度精确闹钟（Android 14+）
   Future<bool> canScheduleExactAlarms() async {
     if (Platform.isAndroid) {
@@ -134,17 +165,21 @@ class NotificationService {
   }
 
   /// 检查并请求所有必要权限
-  /// 返回: (hasNotificationPermission, hasExactAlarmPermission)
-  Future<(bool, bool)> checkAndRequestPermissions() async {
+  /// 返回: (hasNotificationPermission, hasExactAlarmPermission, hasBatteryOptimization)
+  Future<(bool, bool, bool)> checkAndRequestPermissions() async {
     bool notificationPermission = await checkNotificationPermission();
     bool exactAlarmPermission = await canScheduleExactAlarms();
+    bool batteryOptimization = await isIgnoringBatteryOptimizations();
+
+    debugPrint('权限检查 - 通知: $notificationPermission, 精确闹钟: $exactAlarmPermission, 电池优化: $batteryOptimization');
 
     // 如果没有通知权限，请求它
     if (!notificationPermission) {
       notificationPermission = await requestNotificationPermission();
+      debugPrint('请求通知权限结果: $notificationPermission');
     }
 
-    return (notificationPermission, exactAlarmPermission);
+    return (notificationPermission, exactAlarmPermission, batteryOptimization);
   }
 
   /// 调度提醒通知
@@ -219,26 +254,58 @@ class NotificationService {
     required bool useExactMode,
   }) async {
     try {
+      // 获取当前时间
+      final now = DateTime.now();
+      debugPrint('当前时间: $now, 目标时间: $time');
+      
       // 如果时间已过，设置为明天
       var scheduledTime = time;
-      if (scheduledTime.isBefore(DateTime.now())) {
+      if (scheduledTime.isBefore(now)) {
         scheduledTime = scheduledTime.add(const Duration(days: 1));
+        debugPrint('时间已过，调整到明天: $scheduledTime');
       }
 
-      debugPrint('调度一次性通知: id=$id, time=$scheduledTime, exact=$useExactMode');
+      // 转换为 TZDateTime
+      final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
+      debugPrint('调度一次性通知: id=$id, time=$tzScheduledTime, exact=$useExactMode');
       
-      await _notifications.zonedSchedule(
-        id,
-        title,
-        body,
-        tz.TZDateTime.from(scheduledTime, tz.local),
-        _buildNotificationDetails(payload: payload),
-        androidScheduleMode: useExactMode 
-            ? AndroidScheduleMode.exactAllowWhileIdle 
-            : AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      );
-      debugPrint('一次性通知调度成功');
+      // 检查调度时间是否有效
+      if (tzScheduledTime.isBefore(tz.TZDateTime.now(tz.local))) {
+        debugPrint('警告: 调度时间仍在过去，添加一天');
+        final adjustedTime = tzScheduledTime.add(const Duration(days: 1));
+        debugPrint('调整后时间: $adjustedTime');
+        
+        await _notifications.zonedSchedule(
+          id,
+          title,
+          body,
+          adjustedTime,
+          _buildNotificationDetails(payload: payload),
+          androidScheduleMode: useExactMode 
+              ? AndroidScheduleMode.exactAllowWhileIdle 
+              : AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } else {
+        await _notifications.zonedSchedule(
+          id,
+          title,
+          body,
+          tzScheduledTime,
+          _buildNotificationDetails(payload: payload),
+          androidScheduleMode: useExactMode 
+              ? AndroidScheduleMode.exactAllowWhileIdle 
+              : AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      }
+      
+      // 验证通知是否已调度
+      final pendingNotifications = await _notifications.pendingNotificationRequests();
+      final scheduled = pendingNotifications.any((n) => n.id == id);
+      debugPrint('通知调度验证: id=$id, 已调度=$scheduled');
+      
+      debugPrint('一次性通知调度成功: id=$id');
     } catch (e, stack) {
       debugPrint('_scheduleOneTimeNotification 错误: $e');
       debugPrint('Stack: $stack');
